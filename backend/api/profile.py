@@ -1,7 +1,7 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restful import Resource, abort, reqparse
 
-from app.helpers import success_response
+from backend.helpers import success_response
 
 register_parser = reqparse.RequestParser()
 register_parser.add_argument('name', help='Name cannot be blank', trim=True, required=True)
