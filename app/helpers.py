@@ -5,8 +5,8 @@ def success_response(msg=None, **kwargs):
     return generic_response(status='success', msg=msg, **kwargs)
 
 
-def fail_response(msg=None, **kwargs):
-    return generic_response(status='fail', msg=msg, **kwargs)
+def fail_response(msg=None, code=None, **kwargs):
+    return generic_response(status='fail', msg=msg, code=code, **kwargs)
 
 
 def generic_response(status, msg, code=None, **kwargs):
