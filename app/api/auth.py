@@ -15,14 +15,14 @@ class UserLogin(Resource):
         username = data.username
         password = data.password
 
-        access_token = create_access_token(identity=data.username)
-        refresh_token = create_refresh_token(identity=data.username)
+        access_token = create_access_token(identity=username)
+        refresh_token = create_refresh_token(identity=username)
 
         if username != 'inno' or password != 'great':
             return fail_response('Bad username or password', 401)
 
         return success_response(
-            msg='Logged in as {}'.format(data.username),
+            msg='Logged in as {}'.format(username),
             access_token=access_token,
             refresh_token=refresh_token
         )

@@ -10,12 +10,12 @@ def fail_response(msg=None, code=None, **kwargs):
 
 
 def generic_response(status, msg, code=None, **kwargs):
-    r = {'status': status, 'data': kwargs}
-
+    data = {'status': status, 'data': kwargs}
     if msg is not None:
-        r['message'] = msg
+        data['message'] = msg
 
+    response = jsonify(data)
     if code is not None:
-        return jsonify(r)
-    else:
-        return r, code
+        response.status_code = code
+
+    return response
