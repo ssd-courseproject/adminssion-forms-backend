@@ -1,3 +1,4 @@
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
@@ -29,6 +30,7 @@ class FormsBackend(object):
         self.api = Api(self.app, errors=errors)
         self.db = SQLAlchemy(self.app)
         self.jwt = JWTManager(self.app)
+        self.cors = CORS(self.app)
 
     def init(self):
         try:
