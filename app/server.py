@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 from app.core.backend_app import FormsBackend
-
+import importlib
 
 flask_app = Flask(__name__)
 
@@ -16,4 +16,4 @@ def run_app(*args, **kwargs):
 
 application = run_app(debug=True)
 
-import app.core.extensions
+importlib.import_module('app.core.extensions')
