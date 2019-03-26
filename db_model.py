@@ -1,8 +1,79 @@
 from typing import Set, List, Optional, Tuple
 from sqlalchemy import create_engine, Column, Date, Boolean, Text, BigInteger, ForeignKey, ForeignKeyConstraint, \
-    UniqueConstraint, Numeric
+    UniqueConstraint, Numeric, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+
+class Candidate(Base):
+    """
+    Keeps the general info about candidates such as Name, Surname and id
+    """
+    __tablename__ = 'candidates'
+
+    id = Column(BigInteger, primary_key=True)
+    first_name = Column(Text)
+    last_name = Column(Text)
+
+    autorization = relationship('CandidatesAutorization', backref='candidate', uselist=False)  # one-to-one
+    info = relationship('CandidatesInfo', backref='candidate', uselist=False)  # one-to-one
+    status = relationship('CandidatesStatus', backref='candidate', uselist=False)  # one-to-one
+    documents = relationship('CandidatesDocuments', backref='candidate', uselist=False)  # one-to-one
+
+
+class CandidatesAutorization(Base):
+    """
+    Keeps data email and password for candidates' authorization
+    """
+    __tablename__ = 'candidates_autorization'
+
+    email = Column(Text, primary_key=True)
+    id = Column(BigInteger, ForeignKey('candidates.id'), unique=True)  # one to one
+    password = Column(Text)
+
+
+class CandidatesInfo(Base):
+    """
+    Keeps info about each candidate such as nationality, gender, date of birth and email
+    """
+    __tablename__ = 'candidates_info'
+
+    id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
+    nationality = Column(Text)
+    gender = Column(Boolean)
+    date_of_birth = Column(Date)
+    subscription_email = Column(Text)
+    skype = Column(Text)
+    phone = Column(Text)
+
+
+class CandidatesDocuments(Base):
+    """
+    Keeps link on candidate's documents
+    """
+    __tablename__ = 'candidates_documents'
+
+    id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
+    cv = Column(Text)
+    letter_of_recomendation = Column(Text)
+    motivation_letter = Column(Text)
+    passport = Column(Text)
+    photo = Column(Text)
+    project_description = Column(Text)
+    transcript = Column(Text)
+
+
+class CandidatesStatus(Base):
+    """
+    Keeps info about candidate's status which is enum accepted/rejected/waiting_list
+    """
+    __tablename__ = 'candidates_info'
+
+    id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
+    status = Column(BigInteger)
 
 
 class ORM:
