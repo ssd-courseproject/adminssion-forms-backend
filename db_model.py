@@ -13,6 +13,7 @@ class Candidate(Base):
     Keeps the general info about candidates such as Name, Surname and id
     """
     __tablename__ = 'candidates'
+    __table_args__ = {'extend_existing': True}
 
     id = Column(BigInteger, primary_key=True)
     first_name = Column(Text)
@@ -29,6 +30,7 @@ class CandidatesAutorization(Base):
     Keeps data email and password for candidates' authorization
     """
     __tablename__ = 'candidates_autorization'
+    __table_args__ = {'extend_existing': True}
 
     email = Column(Text, primary_key=True)
     id = Column(BigInteger, ForeignKey('candidates.id'), unique=True)  # one to one
@@ -55,6 +57,7 @@ class CandidatesDocuments(Base):
     Keeps link on candidate's documents
     """
     __tablename__ = 'candidates_documents'
+    __table_args__ = {'extend_existing': True}
 
     id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
     cv = Column(Text)
@@ -71,6 +74,7 @@ class CandidatesStatus(Base):
     Keeps info about candidate's status which is enum accepted/rejected/waiting_list
     """
     __tablename__ = 'candidates_info'
+    __table_args__ = {'extend_existing': True}
 
     id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
     status = Column(BigInteger)
