@@ -10,5 +10,6 @@ marshmallow
 flask-marshmallow
 marshmallow-sqlalchemy
 webargs
+faker
 
 PyYAML
