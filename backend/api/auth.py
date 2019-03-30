@@ -12,17 +12,17 @@ login_parser.add_argument('password', help='Password cannot be blank', trim=True
 class UserLogin(Resource):
     def post(self):
         data = login_parser.parse_args()
-        username = data.username
+        email = data.email
         password = data.password
 
-        access_token = create_access_token(identity=username)
-        refresh_token = create_refresh_token(identity=username)
+        access_token = create_access_token(identity=email)
+        refresh_token = create_refresh_token(identity=email)
 
-        if username != 'inno' or password != 'great':
-            return fail_response('Bad username or password', 401)
+        if email != 'super@innopolis.ru' or password != 'great':
+            return fail_response('Bad email or password', 401)
 
         return success_response(
-            msg='Logged in as {}'.format(username),
+            msg='Logged in as {}'.format(email),
             access_token=access_token,
             refresh_token=refresh_token
         )

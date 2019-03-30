@@ -22,11 +22,10 @@ class UserProfile(Resource):
         current_user = get_jwt_identity()
 
         return success_response(
-            username=current_user,
+            email=current_user,
             name='Sergey',
             surname='Malyutkin',
             natinality='RU',
             gender=1,
             date_of_birth='1970-01-01',
-            email='inno@iinopolis.ru'
         )
