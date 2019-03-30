@@ -1,7 +1,6 @@
 from typing import Set, List, Optional, Tuple
 from sqlalchemy import create_engine, Column, Date, Boolean, Text, BigInteger, ForeignKey, ForeignKeyConstraint, \
     UniqueConstraint, Numeric, Enum
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
@@ -9,10 +8,13 @@ import datetime
 Base = declarative_base()
 
 
-class RevokedTokenModel(Base):
+class RevokedToken(Base):
     __tablename__ = 'revoked_tokens'
+    __table_args__ = {'extend_existing': True}
+
     id = Column(BigInteger, primary_key=True)
     jti = Column(Text(120))
+    date = Column(Date)
 
 
 '''
@@ -38,10 +40,13 @@ class Candidate(Base):
     first_name = Column(Text)
     last_name = Column(Text)
 
-    autorization = relationship('CandidatesAutorization', backref='candidate', uselist=False)  # one-to-one
-    info = relationship('CandidatesInfo', backref='candidate', uselist=False)  # one-to-one
-    status = relationship('CandidatesStatus', backref='candidate', uselist=False)  # one-to-one
-    documents = relationship('CandidatesDocuments', backref='candidate', uselist=False)  # one-to-one
+    autorization = relationship('CandidatesAutorization', cascade="all,delete", backref='candidate',
+                                uselist=False)  # one-to-one
+    info = relationship('CandidatesInfo', cascade="all,delete", backref='candidate', uselist=False)  # one-to-one
+    status = relationship('CandidatesStatus', cascade="all,delete", backref='candidate', uselist=False)  # one-to-one
+    documents = relationship('CandidatesDocuments', cascade="all,delete", backref='candidate',
+                             uselist=False)  # one-to-one
+    tests = relationship('CandidatesTests', cascade="all,delete", backref='candidate', uselist=False)  # one-to-one
 
 
 class CandidatesAutorization(Base):
@@ -61,6 +66,7 @@ class CandidatesInfo(Base):
     Keeps info about each candidate such as nationality, gender, date of birth and email
     """
     __tablename__ = 'candidates_info'
+    __table_args__ = {'extend_existing': True}
 
     id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
     nationality = Column(Text)
@@ -121,9 +127,13 @@ class Questions(Base):
 
     id = Column(BigInteger, ForeignKey('questions_tests.question_id'), primary_key=True)
     question = Column(Text)
-    # TODO: add more fields
+    question_type = Column(BigInteger)
+    answer = Column(Text)
+    manually_grading = Column(Boolean, default=False)
+    points = Column(BigInteger)
 
-    questions = relationship('QuestionsTests', backref='questions_tests', uselist=False)  # one-to-one
+    questions = relationship('QuestionsTests', cascade="all,delete", backref='questions_tests',
+                             uselist=False)  # one-to-one
 
 
 class QuestionsTests(Base):
@@ -141,7 +151,8 @@ class Tests(Base):
     id = Column(BigInteger, primary_key=True)
     test_name = Column(Text)
 
-    questions_tests = relationship('QuestionsTests', backref='questions_tests', uselist=False)  # one-to-one
+    questions_tests = relationship('QuestionsTests', cascade="all,delete", backref='questions_tests',
+                                   uselist=False)  # one-to-one
 
 
 class ORM:
@@ -269,4 +280,149 @@ class ORM:
         except Exception as excpt:
             self.session.rollback()
         print(f'Couldn\'t add candidates test: {excpt}')
+        return None
+
+    def add_token(self, id: str, jti: str) -> Optional[int]:
+        try:
+            new_token = RevokedToken(id=id, jti=jti, date=datetime.utcnow)
+            self.session.add(new_token)
+            self.session.commit()
+            return new_token.id
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add new token: {excpt}')
+        return None
+
+    # ------------
+    # GET
+    def get_candidate_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's instance by given id
+        :param id: id of the candidate
+        :return: candidate's instances or None if there is no such candidate
+        """
+        try:
+            candidate = self.session.query(Candidate).get(id)
+            return candidate
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidate: {excpt}')
+        return None
+
+    def get_candidate_name_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's name by given id
+        :param id: id of the candidate
+        :return: candidate's name or None if there is no such candidate
+        """
+        try:
+            candidate = self.session.query(Candidate).get(id)
+            return candidate.first_name
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidate name: {excpt}')
+        return None
+
+    def get_candidate_surname_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's surname by given id
+        :param id: id of the candidate
+        :return: candidate's surname or None if there is no such candidate
+        """
+        try:
+            candidate = self.session.query(Candidate).get(id)
+            return candidate.last_name
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidate surname: {excpt}')
+        return None
+
+    def get_candidate_nationality_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's nationality by given id
+        :param id: id of the candidate
+        :return: candidate's nationality or None if there is no such candidate
+        """
+        try:
+            candidate = self.session.query(CandidatesInfo).get(id)
+            return candidate.nationality
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidate nationality: {excpt}')
+        return None
+
+    def get_candidate_gender_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's gender by given id. Converts it to the male or female instead of boolean value.
+        :param id: id of the candidate
+        :return: candidate's gender or None if there is no such candidate
+        """
+        try:
+            candidate = self.session.query(CandidatesInfo).get(id)
+            gender = candidate.gender
+            if gender == False:
+                return ('Male')
+            else:
+                return ('Female')
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidate gender: {excpt}')
+        return None
+
+    # ------------
+    # DELETE
+
+    def delete_token(self, id: int) -> Optional[int]:
+        """
+        Deletes given token by id
+        :param id: id of the given token to delete
+        :return: True if token was delete successfully, False if token was not found, None in case of error
+        """
+        try:
+            existing_token = self.session.query(RevokedToken).filter_by(id=id).first()
+            if existing_token:
+                self.session.delete(existing_token)
+                self.session.commit()
+                return True
+            else:
+                return False  # there is no such token
+
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t delete revoked token: {excpt}')
+        return None
+
+    def delete_candidate(self, id: int) -> Optional[int]:
+        """
+        This function will delete all candidates data including candidate's info, tests passed by candidate and etc
+        :param id: the id of the candidate
+        :return: True if candidate was delete successfully, False if candidate was not found, None in case of error
+        """
+        try:
+            existiing_candidate = self.session.query(Candidate).filter_by(id=id).first()
+            if existiing_candidate:
+                self.session.delete(existiing_candidate)
+                self.session.commit()
+                return True
+            else:
+                return False  # there is no such candidate
+
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t delete candidate: {excpt}')
+        return None
+
+    def delete_candidates_documents(self, id: int) -> Optional[int]:
+        try:
+            existiing_candidates_documents = self.session.query(CandidatesDocuments).filter_by(id=id).first()
+            if existiing_candidates_documents:
+                self.session.delete(existiing_candidates_documents)
+                self.session.commit()
+                return True
+            else:
+                return False  # there is no such candidates documents
+
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t delete candidate documents: {excpt}')
         return None
