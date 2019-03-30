@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, Column, Date, Boolean, Text, BigInteger, F
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
+import datetime
 
 Base = declarative_base()
 
@@ -105,10 +106,42 @@ class CandidatesTests(Base):
     __tablename__ = 'candidates_tests'
     __table_args__ = {'extend_existing': True}
 
+    # composite primary key
     id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
-    questions = Column(Array(BigInteger), ForeignKey('questions.id'), primary_key=True)
-    # TODO: array elements foreign keys
-    answers = Column(Array(BigInteger), ForeignKey('questions.id'), primary_key=True)
+    question_id = Column(BigInteger, ForeignKey('questions.id'), primary_key=True)
+    start_date = Column(Date, default=datetime.datetime.utcnow)
+    end_date = Column(Date)
+    answer = Column(Text)
+    points = Column(BigInteger)
+
+
+class Questions(Base):
+    __tablename__ = 'questions'
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(BigInteger, ForeignKey('questions_tests.question_id'), primary_key=True)
+    question = Column(Text)
+    # TODO: add more fields
+
+    questions = relationship('QuestionsTests', backref='questions_tests', uselist=False)  # one-to-one
+
+
+class QuestionsTests(Base):
+    __tablename__ = 'questions_tests'
+    __table_args__ = {'extend_existing': True}
+
+    question_id = Column(BigInteger, ForeignKey('questions.id'), primary_key=True)
+    test_id = Column(BigInteger, ForeignKey('tests.id'))
+
+
+class Tests(Base):
+    __tablename__ = 'tests'
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(BigInteger, primary_key=True)
+    test_name = Column(Text)
+
+    questions_tests = relationship('QuestionsTests', backref='questions_tests', uselist=False)  # one-to-one
 
 
 class ORM:
@@ -168,5 +201,72 @@ class ORM:
             return new_candidate.id
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t add new Person tuple: {excpt}')
+            print(f'Couldn\'t add new candidate: {excpt}')
+        return None
+
+    def add_candidates_info(self, candidate_id, nationaity: str = None, gender: bool = False,
+                            date_of_birth: Date = None,
+                            subscription_email: str = None, skype: str = None, phone: str = None) -> Optional[int]:
+        try:
+            candidates_info = CandidatesInfo(candidate_id=candidate_id, nationaity=nationaity, gender=gender,
+                                             date_of_birth=date_of_birth,
+                                             subscription_email=subscription_email, skype=skype, phone=phone)
+            self.session.add(candidates_info)
+            self.session.commit()
+            return candidates_info.id
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add candidates info: {excpt}')
+        return None
+
+    def add_candidates_autorization(self, email: str, id: int, password: str) -> Optional[int]:
+        try:
+            existing_candidates_autorization = self.session.query(CandidatesAutorization).filter_by(email=email).first()
+            if not existing_candidates_autorization:
+                candidate_autorization = CandidatesAutorization(email=email, id=id, password=password)
+                self.session.add(candidate_autorization)
+                self.session.commit()
+                return candidate_autorization.email
+            else:
+                return existing_candidates_autorization
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t add candidates autorization: {excpt}')
+        return None
+
+    def add_candidates_documents(self, id: int, cv: str = None, letter_of_recomendation: str = None,
+                                 motivation_letter: str = None, passport: str = None, photo: str = None,
+                                 project_description: str = None, transcript: str = None) -> Optional[int]:
+        try:
+            candidates_documents = CandidatesDocuments(id=id, cv=cv, letter_of_recomendation=letter_of_recomendation,
+                                                       motivation_letter=motivation_letter, passport=passport,
+                                                       photo=photo, project_description=project_description,
+                                                       transcript=transcript)
+            self.session.add(candidates_documents)
+            self.session.commit()
+            return candidates_documents.id
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t add candidates documents: {excpt}')
+        return None
+
+    def add_candidates_tests(self, candidate_id: int, question_id: int, start_date: Date, end_date: Date, answer: str,
+                             points: str = None) -> Optional[int]:
+        try:
+            existing_candidates_tests = self.session.query(CandidatesTests).filter_by(candidate_id=id,
+                                                                                      question_id=question_id).first()
+            if not existing_candidates_tests:
+                candidates_tests = CandidatesTests(id=candidate_id, question_id=question_id, answer=answer,
+                                                   points=None)
+                self.session.add(candidates_tests)
+                self.session.commit()
+                return candidates_tests.id
+            else:
+                # case of changing the answer
+                existing_candidates_tests.answer = answer
+                self.session.commit()
+                return existing_candidates_tests.id
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t add candidates test: {excpt}')
         return None
