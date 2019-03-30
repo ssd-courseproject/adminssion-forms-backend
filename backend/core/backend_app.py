@@ -24,6 +24,10 @@ class FormsBackend(object):
                 'status': 410,
                 'extra': "Any extra information you want.",
             },
+            'ExpiredSignatureError': {
+                'message': "Your token is expired",
+                'status': 401,
+            }
         }
 
         self.app = flask_app
