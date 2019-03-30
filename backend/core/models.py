@@ -1,3 +1,4 @@
+from sqlalchemy.testing import db
 
 
 class RevokedTokenModel(db.Model):

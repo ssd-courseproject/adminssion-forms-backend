@@ -2,7 +2,7 @@ from flask_jwt_extended import jwt_required, jwt_refresh_token_required, get_jwt
     get_raw_jwt, create_refresh_token
 from flask_restful import Resource, reqparse
 
-from app.helpers import success_response, fail_response
+from backend.helpers import success_response, fail_response
 
 login_parser = reqparse.RequestParser()
 login_parser.add_argument('username', help='Username cannot be blank', trim=True, required=True)
@@ -15,14 +15,14 @@ class UserLogin(Resource):
         username = data.username
         password = data.password
 
-        access_token = create_access_token(identity=data.username)
-        refresh_token = create_refresh_token(identity=data.username)
+        access_token = create_access_token(identity=username)
+        refresh_token = create_refresh_token(identity=username)
 
         if username != 'inno' or password != 'great':
             return fail_response('Bad username or password', 401)
 
         return success_response(
-            msg='Logged in as {}'.format(data.username),
+            msg='Logged in as {}'.format(username),
             access_token=access_token,
             refresh_token=refresh_token
         )
