@@ -87,7 +87,7 @@ class CandidatesDocuments(Base):
 
     id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
     cv = Column(Text)
-    letter_of_recomendation = Column(Text)
+    letter_of_recommendation = Column(Text)
     motivation_letter = Column(Text)
     passport = Column(Text)
     photo = Column(Text)
@@ -219,6 +219,17 @@ class ORM:
     def add_candidates_info(self, candidate_id, nationaity: str = None, gender: bool = False,
                             date_of_birth: Date = None,
                             subscription_email: str = None, skype: str = None, phone: str = None) -> Optional[int]:
+        """
+        Adds all necessary candidate's info
+        :param candidate_id: id of the given candidate
+        :param nationaity: nationality
+        :param gender: boolean value. False for male and true for female
+        :param date_of_birth: datetime
+        :param subscription_email: email used for autorization
+        :param skype: skype username
+        :param phone: mobile phone of the user
+        :return: id of the given candidate or None in case of error
+        """
         try:
             candidates_info = CandidatesInfo(candidate_id=candidate_id, nationaity=nationaity, gender=gender,
                                              date_of_birth=date_of_birth,
@@ -232,13 +243,20 @@ class ORM:
         return None
 
     def add_candidates_autorization(self, email: str, id: int, password: str) -> Optional[int]:
+        """
+        Fill in all necessary fields for autorization
+        :param email: candidates's email
+        :param id: candidate's id
+        :param password: candidates's password
+        :return: new or existing autorization instance or None in case of error
+        """
         try:
             existing_candidates_autorization = self.session.query(CandidatesAutorization).filter_by(email=email).first()
             if not existing_candidates_autorization:
                 candidate_autorization = CandidatesAutorization(email=email, id=id, password=password)
                 self.session.add(candidate_autorization)
                 self.session.commit()
-                return candidate_autorization.email
+                return candidate_autorization
             else:
                 return existing_candidates_autorization
         except Exception as excpt:
@@ -246,11 +264,23 @@ class ORM:
         print(f'Couldn\'t add candidates autorization: {excpt}')
         return None
 
-    def add_candidates_documents(self, id: int, cv: str = None, letter_of_recomendation: str = None,
+    def add_candidates_documents(self, id: int, cv: str = None, letter_of_recommendation: str = None,
                                  motivation_letter: str = None, passport: str = None, photo: str = None,
                                  project_description: str = None, transcript: str = None) -> Optional[int]:
+        """
+        Add all necessary candidates documents (links to the files)
+        :param id: candidate's id
+        :param cv: link to the cv
+        :param letter_of_recommendation: link to the letter of recommendation
+        :param motivation_letter: link to the motivation letter
+        :param passport: link to the scan of the passport
+        :param photo: link to the photo of given candidate
+        :param project_description: link to the project description
+        :param transcript: link to the transcript
+        :return: id of the given candidate or None in case of error
+        """
         try:
-            candidates_documents = CandidatesDocuments(id=id, cv=cv, letter_of_recomendation=letter_of_recomendation,
+            candidates_documents = CandidatesDocuments(id=id, cv=cv, letter_of_recomendation=letter_of_recommendation,
                                                        motivation_letter=motivation_letter, passport=passport,
                                                        photo=photo, project_description=project_description,
                                                        transcript=transcript)
@@ -264,6 +294,16 @@ class ORM:
 
     def add_candidates_tests(self, candidate_id: int, question_id: int, start_date: Date, end_date: Date, answer: str,
                              points: str = None) -> Optional[int]:
+        """
+        Add all question's data according to the given candidate
+        :param candidate_id: id of the candidate
+        :param question_id: id of the question
+        :param start_date: moment when the passing of test were started
+        :param end_date: moment when test should be closed
+        :param answer: answer of the given candidate
+        :param points: points earned for this question by given candidate
+        :return: id of the given candidates or None in case of error
+        """
         try:
             existing_candidates_tests = self.session.query(CandidatesTests).filter_by(candidate_id=id,
                                                                                       question_id=question_id).first()
@@ -284,6 +324,12 @@ class ORM:
         return None
 
     def add_token(self, id: str, jti: str) -> Optional[int]:
+        """
+        Add new token to the database
+        :param id: id of new token
+        :param jti: jti token
+        :return: id of added token or None in case of error
+        """
         try:
             new_token = RevokedToken(id=id, jti=jti, date=datetime.utcnow)
             self.session.add(new_token)
@@ -599,6 +645,11 @@ class ORM:
         return None
 
     def delete_candidates_documents(self, id: int) -> Optional[int]:
+        """
+        Deletes all candidates' documents by given candidate's id
+        :param id: the id of the candidate
+        :return: True if candidate's documents were deleted successfully, False if candidate_documents were not found, None in case of error
+        """
         try:
             existiing_candidates_documents = self.session.query(CandidatesDocuments).filter_by(id=id).first()
             if existiing_candidates_documents:
