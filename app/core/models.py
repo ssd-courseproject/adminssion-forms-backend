@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, Column, Date, Boolean, Text, BigInteger, F
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
+from datetime import date
 
 Base = declarative_base()
 
@@ -337,6 +338,20 @@ class ORM:
             print(f'Couldn\'t get candidate surname: {excpt}')
         return None
 
+    def get_candidate_info_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's info instance by given id
+        :param id: id of the candidate
+        :return: candidate's info instances or None if there is no such candidate
+        """
+        try:
+            candidate_info = self.session.query(CandidatesInfo).get(id)
+            return candidate_info
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidates info: {excpt}')
+        return None
+
     def get_candidate_nationality_by_id(self, id: int) -> Optional[Candidate]:
         """
         Get candidate's nationality by given id
@@ -367,6 +382,177 @@ class ORM:
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get candidate gender: {excpt}')
+        return None
+
+    def get_candidate_age_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's date of birth and calculates age
+        :param id: id of the candidate
+        :return: candidate's age or None if there is no such candidate
+        """
+        try:
+            candidate = self.session.query(CandidatesInfo).get(id)
+            date_of_birth = candidate.date_of_birth
+            today = date.today()
+            return today.year - date_of_birth.year - (
+                    (today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidate nationality: {excpt}')
+        return None
+
+    def get_candidate_email_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's email by given id
+        :param id: id of the candidate
+        :return: candidate's email or None if there is no such candidate
+        """
+        try:
+            candidate = self.session.query(CandidatesInfo).get(id)
+            return candidate.email
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidate email: {excpt}')
+        return None
+
+    def get_candidate_skype_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's skype by given id
+        :param id: id of the candidate
+        :return: candidate's skype or None if there is no such candidate
+        """
+        try:
+            candidate = self.session.query(CandidatesInfo).get(id)
+            return candidate.skype
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidate skype: {excpt}')
+        return None
+
+    def get_candidate_phone_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's phone by given id
+        :param id: id of the candidate
+        :return: candidate's phone or None if there is no such candidate
+        """
+        try:
+            candidate = self.session.query(CandidatesInfo).get(id)
+            return candidate.phone
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidate nationality: {excpt}')
+        return None
+
+    def get_candidate_documents_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get candidate's documents instance by given id
+        :param id: id of the candidate
+        :return: candidate's documents instances or None if there is no such candidate
+        """
+        try:
+            candidate_documents = self.session.query(CandidatesDocuments).get(id)
+            return candidate_documents
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidates documents: {excpt}')
+        return None
+
+    def get_candidate_cv_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get link to candidate's cv by given id
+        :param id: id of the candidate
+        :return: candidate's cv or None if there is no such candidate
+        """
+        try:
+            candidate_documents = self.session.query(CandidatesDocuments).get(id)
+            return candidate_documents.cv
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidates cv: {excpt}')
+        return None
+
+    def get_candidate_letter_of_recommendation_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get link to candidate's letter of recomendation by given id
+        :param id: id of the candidate
+        :return: candidate's letter of recommendation or None if there is no such candidate
+        """
+        try:
+            candidate_documents = self.session.query(CandidatesDocuments).get(id)
+            return candidate_documents.letter_of_recomendation
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidates letter of recomendation: {excpt}')
+        return None
+
+    def get_candidate_motivation_letter_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get link to candidate's motivation letter by given id
+        :param id: id of the candidate
+        :return: candidate's motivation letter or None if there is no such candidate
+        """
+        try:
+            candidate_documents = self.session.query(CandidatesDocuments).get(id)
+            return candidate_documents.motivation_letter
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidates motivation letter: {excpt}')
+        return None
+
+    def get_candidate_passport_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get link to candidate's passport by given id
+        :param id: id of the candidate
+        :return: candidate's passport or None if there is no such candidate
+        """
+        try:
+            candidate_documents = self.session.query(CandidatesDocuments).get(id)
+            return candidate_documents.passport
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidates passport: {excpt}')
+        return None
+
+    def get_candidate_photo_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get link to candidate's photo by given id
+        :param id: id of the candidate
+        :return: candidate's photo or None if there is no such candidate
+        """
+        try:
+            candidate_documents = self.session.query(CandidatesDocuments).get(id)
+            return candidate_documents.photo
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidates photo: {excpt}')
+        return None
+
+    def get_candidate_project_description_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get link to candidate's project description by given id
+        :param id: id of the candidate
+        :return: candidate's project description or None if there is no such candidate
+        """
+        try:
+            candidate_documents = self.session.query(CandidatesDocuments).get(id)
+            return candidate_documents.project_description
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidates project description: {excpt}')
+        return None
+
+    def get_candidate_transcript_by_id(self, id: int) -> Optional[Candidate]:
+        """
+        Get link to candidate's transcript by given id
+        :param id: id of the candidate
+        :return: candidate's transcript or None if there is no such candidate
+        """
+        try:
+            candidate_documents = self.session.query(CandidatesDocuments).get(id)
+            return candidate_documents.transcript
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get candidates transcript: {excpt}')
         return None
 
     # ------------
