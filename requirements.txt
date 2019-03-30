@@ -10,3 +10,5 @@ marshmallow
 flask-marshmallow
 marshmallow-sqlalchemy
 webargs
+
+PyYAML
