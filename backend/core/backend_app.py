@@ -30,6 +30,10 @@ class FormsBackend(object):
             },
             'ExpiredSignatureError': {
                 'message': "Your token is expired",
+                'status': 419,
+            },
+            'NoAuthorizationError': {
+                'message': "Authorization token not provided",
                 'status': 401,
             }
         }
@@ -57,5 +61,4 @@ class FormsBackend(object):
         self.api.add_resource(profile.UserProfile, '/profile')
 
     def run(self, *args, **kwargs):
-        self.app.config['PROPAGATE_EXCEPTIONS'] = False
         self.app.run(*args, **kwargs)

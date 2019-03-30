@@ -2,6 +2,7 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_BLACKLIST_ENABLED = True
     JWT_BLACKLIST_TOKEN_CHECKS = ['access', 'refresh']
+    PROPAGATE_EXCEPTIONS = False
 
     SECRET_KEY = 'some-secret-string'
     SQLALCHEMY_DATABASE_URI = 'sqlite:///app.db'
