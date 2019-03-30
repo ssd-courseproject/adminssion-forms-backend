@@ -6,7 +6,7 @@ from backend.helpers import success_response
 register_parser = reqparse.RequestParser()
 register_parser.add_argument('name', help='Name cannot be blank', trim=True, required=True)
 register_parser.add_argument('surname', help='Surname cannot be blank', trim=True, required=True)
-register_parser.add_argument('username', help='Username cannot be blank', trim=True, required=True)
+register_parser.add_argument('email', help='Email cannot be blank', trim=True, required=True)
 register_parser.add_argument('password', help='Password cannot be blank', trim=True, required=True)
 
 

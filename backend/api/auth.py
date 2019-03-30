@@ -5,7 +5,7 @@ from flask_restful import Resource, reqparse
 from backend.helpers import success_response, fail_response
 
 login_parser = reqparse.RequestParser()
-login_parser.add_argument('username', help='Username cannot be blank', trim=True, required=True)
+login_parser.add_argument('email', help='Email cannot be blank', trim=True, required=True)
 login_parser.add_argument('password', help='Password cannot be blank', trim=True, required=True)
 
 
