@@ -11,9 +11,9 @@ from backend.api import auth, profile
 from backend.config.main import OPENAPI_VERSION, API_VERSION_NUMBER, APP_NAME
 
 try:
-    from backend.config import main_local
+    from backend.config.main_local import LocalConfig as Config
 except ImportError:
-    from backend.config import main as main_local
+    from backend.config.main import Config
 
 
 class FormsBackend(object):
@@ -48,10 +48,7 @@ class FormsBackend(object):
         )
 
     def init(self):
-        try:
-            self.app.config.from_object(main_local.LocalConfig)
-        except:
-            self.app.config.from_object(main_local.DefaultConfig)
+        self.app.config.from_object(Config)
 
         self.api.add_resource(auth.UserLogin, '/auth/login')
         self.api.add_resource(auth.UserLogout, '/auth/logout')

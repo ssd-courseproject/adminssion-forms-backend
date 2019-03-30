@@ -1,5 +1,5 @@
 import json
-from backend.server import application
+from server import application
 
 
 def application_add_spec():

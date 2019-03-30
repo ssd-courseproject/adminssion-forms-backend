@@ -1,4 +1,4 @@
-from backend.server import application
+from server import application
 
 
 def application_extend():
