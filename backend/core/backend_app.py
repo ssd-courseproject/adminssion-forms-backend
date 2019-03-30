@@ -9,6 +9,7 @@ from apispec_webframeworks.flask import FlaskPlugin
 
 from backend.api import auth, profile
 from backend.config.main import OPENAPI_VERSION, API_VERSION_NUMBER, APP_NAME
+from backend.core.errors import error_descriptions
 
 try:
     from backend.config.main_local import LocalConfig as Config
@@ -19,27 +20,8 @@ except ImportError:
 class FormsBackend(object):
 
     def __init__(self, flask_app):
-        errors = {
-            'UserAlreadyExistsError': {
-                'message': "A user with that username already exists.",
-                'status': 409,
-            },
-            'ResourceDoesNotExist': {
-                'message': "A resource with that ID no longer exists.",
-                'status': 410,
-            },
-            'ExpiredSignatureError': {
-                'message': "Your token is expired",
-                'status': 419,
-            },
-            'NoAuthorizationError': {
-                'message': "Authorization token not provided",
-                'status': 401,
-            }
-        }
-
         self.app = flask_app
-        self.api = Api(self.app, errors=errors)
+        self.api = Api(self.app, errors=error_descriptions)
         self.db = SQLAlchemy(self.app)
         self.jwt = JWTManager(self.app)
         self.cors = CORS(self.app)
