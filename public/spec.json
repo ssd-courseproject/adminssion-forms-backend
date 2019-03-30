@@ -1,0 +1,15 @@
+{
+  "paths": {},
+  "tags": [],
+  "info": {
+    "title": "Admission Portal",
+    "version": "0.0.2"
+  },
+  "openapi": "3.0.2",
+  "components": {
+    "parameters": {},
+    "responses": {},
+    "schemas": {},
+    "securitySchemes": {}
+  }
+}

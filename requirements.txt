@@ -5,3 +5,8 @@ flask-sqlalchemy
 flask-cors
 passlib
 apispec
+apispec-webframeworks
+marshmallow
+flask-marshmallow
+marshmallow-sqlalchemy
+webargs

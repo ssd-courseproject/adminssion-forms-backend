@@ -10,7 +10,9 @@ class DefaultConfig(Config):
     JWT_SECRET_KEY = 'jwt-secret-string'
 
 
-API_VERSION_NUMBER = '0.1'
+APP_NAME = 'Admission Portal'
+
+API_VERSION_NUMBER = '0.0.2'
 API_VERSION_LABEL = 'v1'
 
-
+OPENAPI_VERSION = '3.0.2'

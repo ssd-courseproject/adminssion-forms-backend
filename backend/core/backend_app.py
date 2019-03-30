@@ -1,9 +1,14 @@
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
+from flask_marshmallow import Marshmallow
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec_webframeworks.flask import FlaskPlugin
 
 from backend.api import auth, profile
+from backend.config.main import OPENAPI_VERSION, API_VERSION_NUMBER, APP_NAME
 
 try:
     from backend.config import main_local
@@ -22,7 +27,6 @@ class FormsBackend(object):
             'ResourceDoesNotExist': {
                 'message': "A resource with that ID no longer exists.",
                 'status': 410,
-                'extra': "Any extra information you want.",
             },
             'ExpiredSignatureError': {
                 'message': "Your token is expired",
@@ -35,6 +39,13 @@ class FormsBackend(object):
         self.db = SQLAlchemy(self.app)
         self.jwt = JWTManager(self.app)
         self.cors = CORS(self.app)
+        self.ma = Marshmallow(self.app)
+        self.spec = APISpec(
+            title=APP_NAME,
+            version=API_VERSION_NUMBER,
+            openapi_version=OPENAPI_VERSION,
+            plugins=[FlaskPlugin(), MarshmallowPlugin()],
+        )
 
     def init(self):
         try:

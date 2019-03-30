@@ -19,3 +19,8 @@ def generic_response(status, msg, code=None, **kwargs):
         response.status_code = code
 
     return response
+
+
+def write_public_file(path, content):
+    with open('public/' + path, 'w') as f:
+        f.write(content)
