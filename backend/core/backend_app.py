@@ -1,7 +1,7 @@
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
-from flask_restful import Api
+from flask_restful import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
 from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
@@ -18,6 +18,17 @@ except ImportError:
 
 
 class FormsBackend(object):
+    routes = {
+        'auth': {
+            'login': auth.UserLogin,
+            'logout': auth.UserLogout,
+            'refresh': auth.TokenRefresh,
+        },
+        'profile': {
+            '': profile.UserProfile,
+            'register': profile.UserRegistration,
+        }
+    }
 
     def __init__(self, flask_app):
         self.app = flask_app
@@ -36,11 +47,35 @@ class FormsBackend(object):
     def init(self):
         self.app.config.from_object(Config)
 
-        self.api.add_resource(auth.UserLogin, '/auth/login')
-        self.api.add_resource(auth.UserLogout, '/auth/logout')
-        self.api.add_resource(auth.TokenRefresh, '/auth/refresh')
-        self.api.add_resource(profile.UserRegistration, '/profile/register')
-        self.api.add_resource(profile.UserProfile, '/profile')
+        self._add_routes(self.routes)
+
+    def _add_routes(self, routes, prefix=''):
+        for path in routes:
+            p_path = (prefix + '/' + path.strip('/')).rstrip('/')
+            route = routes[path]
+
+            if isinstance(route, dict):
+                self._add_routes(route, prefix=p_path)
+            elif issubclass(route, Resource):
+                self._add_resource(route, path=p_path)
+            else:
+                raise Exception("Unknown route type")
+
+    def _add_resource(self, resource: Resource.__class__, path: str):
+        self.api.add_resource(resource, path)
+
+        self._add_resource_spec(resource)
+
+    def _add_resource_spec(self, resource: Resource.__class__):
+        """
+        Register resource
+        """
+        method_name = resource.__name__.lower()
+        method_view = self.app.view_functions[method_name]
+
+        with self.app.test_request_context():
+            # self.spec.add_path(resource=resource, api=application.api)
+            self.spec.path(view=method_view)
 
     def run(self, *args, **kwargs):
         self.app.run(*args, **kwargs)

@@ -29,3 +29,7 @@ class UserProfile(Resource):
             gender=1,
             date_of_birth='1970-01-01',
         )
+
+    @jwt_required
+    def put(self):
+        return success_response()

@@ -26,14 +26,14 @@ def extend_app():
     from backend.core.extensions import application_extend
     from backend.core.spec import application_add_spec
 
-    application_extend()
-    application_add_spec()
+    application_extend(application)
+    application_add_spec(application)
 
 
 def write_spec():
     from backend.core.spec import generate_spec
 
-    write_public_file(SPEC_FILENAME, generate_spec())
+    write_public_file(SPEC_FILENAME, generate_spec(application))
 
 
 extend_app()
