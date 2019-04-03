@@ -1,14 +1,14 @@
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 
-from app.api import auth, profile,test
+from backend.api import auth, profile
 
 try:
-    from app.config import main_local
+    from backend.config import main_local
 except ImportError:
-    from app.config import main as main_local
-
+    from backend.config import main as main_local
 
 
 class FormsBackend(object):
@@ -30,6 +30,7 @@ class FormsBackend(object):
         self.api = Api(self.app, errors=errors)
         self.db = SQLAlchemy(self.app)
         self.jwt = JWTManager(self.app)
+        self.cors = CORS(self.app)
 
     def init(self):
         try:
@@ -42,10 +43,6 @@ class FormsBackend(object):
         self.api.add_resource(auth.TokenRefresh, '/auth/refresh')
         self.api.add_resource(profile.UserRegistration, '/profile/register')
         self.api.add_resource(profile.UserProfile, '/profile')
-        self.api.add_resource(test.ActualTest,'/test')
-        self.api.add_resource(test.ArchiveTest,'/archive/test')
-        self.api.add_resource(test.TestAnswers,'/testAnswers')
-
 
     def run(self, *args, **kwargs):
         self.app.config['PROPAGATE_EXCEPTIONS'] = False
