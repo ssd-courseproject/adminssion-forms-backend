@@ -8,7 +8,7 @@ from apispec.ext.marshmallow import MarshmallowPlugin
 from apispec_webframeworks.flask import FlaskPlugin
 
 from backend.api import auth, profile
-from backend.config.main import OPENAPI_VERSION, API_VERSION_NUMBER, APP_NAME
+from backend.config.main import OPENAPI_VERSION, API_VERSION_NUMBER, APP_NAME, APP_DESCRIPTION
 from backend.core.errors import error_descriptions
 
 try:
@@ -37,11 +37,14 @@ class FormsBackend(object):
         self.jwt = JWTManager(self.app)
         self.cors = CORS(self.app)
         self.ma = Marshmallow(self.app)
+
         self.spec = APISpec(
             title=APP_NAME,
+            description=APP_DESCRIPTION,
             version=API_VERSION_NUMBER,
             openapi_version=OPENAPI_VERSION,
             plugins=[FlaskPlugin(), MarshmallowPlugin()],
+            servers=[{'url': '/'}]
         )
 
     def init(self):

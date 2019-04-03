@@ -12,6 +12,11 @@ register_parser.add_argument('password', help='Password cannot be blank', trim=T
 
 class UserRegistration(Resource):
     def post(self):
+        """
+        ---
+        summary: Registration
+        description: Creates new user profile
+        """
         data = register_parser.parse_args()
         return {'message': 'User registration'}
 
@@ -19,6 +24,11 @@ class UserRegistration(Resource):
 class UserProfile(Resource):
     @jwt_required
     def get(self):
+        """
+        ---
+        summary: Profile
+        description: Gives all information about current user's profile
+        """
         current_user = get_jwt_identity()
 
         return success_response(
@@ -32,4 +42,9 @@ class UserProfile(Resource):
 
     @jwt_required
     def put(self):
+        """
+        ---
+        summary: Profile
+        description: Updates user profile data
+        """
         return success_response()

@@ -13,6 +13,7 @@ class Config(object):
 
 
 APP_NAME = 'Admission Portal'
+APP_DESCRIPTION = 'IU admission portal backend API (prototype)'
 
 API_VERSION_NUMBER = '0.0.3'
 API_VERSION_LABEL = 'v1'

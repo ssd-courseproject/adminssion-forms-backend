@@ -3,12 +3,15 @@ from marshmallow import fields
 
 
 class ErrorSchema(Schema):
-    message = fields.Str()
+    message = fields.List(fields.Str())
 
 
 class LoginSchema(Schema):
-    email = fields.Str(required=True)
-    password = fields.Str(required=True)
+    class Meta:
+        strict = True
+
+    email = fields.Str(required=True, error_messages={'required': 'Email is required'})
+    password = fields.Str(required=True, error_messages={'required': 'Password is required'})
 
 
 class TokensSchema(Schema):
