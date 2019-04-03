@@ -40,10 +40,10 @@ class FormsBackend(object):
 
         self.spec = APISpec(
             title=APP_NAME,
-            description=APP_DESCRIPTION,
             version=API_VERSION_NUMBER,
             openapi_version=OPENAPI_VERSION,
             plugins=[FlaskPlugin(), MarshmallowPlugin()],
+            info={'description': APP_DESCRIPTION},
             servers=[{'url': '/'}]
         )
 
