@@ -109,3 +109,5 @@ venv.bak/
 .idea/sonarlint/
 app/config/main_local.py
 config/local.py
+
+redoc.html

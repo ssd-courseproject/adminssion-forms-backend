@@ -14,7 +14,7 @@ class Config(object):
 
 APP_NAME = 'Admission Portal'
 
-API_VERSION_NUMBER = '0.0.2'
+API_VERSION_NUMBER = '0.0.3'
 API_VERSION_LABEL = 'v1'
 OPENAPI_VERSION = '3.0.2'
 
