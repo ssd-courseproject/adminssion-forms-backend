@@ -1,6 +1,6 @@
 from typing import Set, List, Optional, Tuple
 from sqlalchemy import create_engine, Column, Date, Boolean, Text, BigInteger, ForeignKey, ForeignKeyConstraint, \
-    UniqueConstraint, Numeric, Enum
+    UniqueConstraint, Numeric, Enum, ARRAY
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
@@ -16,41 +16,47 @@ class RevokedToken(Base):
     id = Column(BigInteger, primary_key=True)
     jti = Column(Text(120))
     date = Column(Date)
+    expired = Column(Boolean)
 
 
-'''
-    def add(self):
-        db.session.add(self)
-        db.session.commit()
-
-    @classmethod
-    def is_jti_blacklisted(cls, jti):
-        query = cls.query.filter_by(jti=jti).first()
-        return bool(query)
-'''
-
-
-class Candidate(Base):
+class Users(Base):
     """
     Keeps the general info about candidates such as Name, Surname and id
     """
-    __tablename__ = 'candidates'
+    __tablename__ = 'users'
     __table_args__ = {'extend_existing': True}
 
     id = Column(BigInteger, primary_key=True)
     first_name = Column(Text)
     last_name = Column(Text)
+    role = Column(BigInteger)
 
-    autorization = relationship('CandidatesAutorization', cascade="all,delete", backref='candidate',
+    autorization = relationship('UsersAutorization', cascade="all,delete", backref='user',
                                 uselist=False)  # one-to-one
-    info = relationship('CandidatesInfo', cascade="all,delete", backref='candidate', uselist=False)  # one-to-one
-    status = relationship('CandidatesStatus', cascade="all,delete", backref='candidate', uselist=False)  # one-to-one
-    documents = relationship('CandidatesDocuments', cascade="all,delete", backref='candidate',
+    info = relationship('CandidatesInfo', cascade="all,delete", backref='user', uselist=False)  # one-to-one
+    status = relationship('CandidatesStatus', cascade="all,delete", backref='user', uselist=False)  # one-to-one
+    documents = relationship('CandidatesDocuments', cascade="all,delete", backref='user',
                              uselist=False)  # one-to-one
-    tests = relationship('CandidatesTests', cascade="all,delete", backref='candidate', uselist=False)  # one-to-one
+    tests = relationship('CandidatesAnswers', cascade="all,delete", backref='user', uselist=False)  # one-to-one
+    submission = relationship('TestsSubmissions', cascade="all,delete", backref='user',
+                              uselist=False)  # one-to-one
+    candidates_interview = relationship('CandidatesInterview', cascade="all,delete", backref='user',
+                                        uselist=False)  # one-to-one
+    staff_interview = relationship('CandidatesInterview', cascade="all,delete", backref='user',
+                                   uselist=False)  # one-to-one
+    staff_positions = relationship('Staff', cascade="all,delete", backref='user',
+                                   uselist=False)  # one-to-one
 
 
-class CandidatesAutorization(Base):
+class Staff(Base):
+    __tablename__ = 'staff'
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(BigInteger, ForeignKey('user.id'), primary_key=True)
+    position = Column(Text)
+
+
+class UsersAutorization(Base):
     """
     Keeps data email and password for candidates' authorization
     """
@@ -58,7 +64,7 @@ class CandidatesAutorization(Base):
     __table_args__ = {'extend_existing': True}
 
     email = Column(Text, primary_key=True)
-    id = Column(BigInteger, ForeignKey('candidates.id'), unique=True)  # one to one
+    id = Column(BigInteger, ForeignKey('user.id'), unique=True)  # one to one
     password = Column(Text)
 
 
@@ -69,13 +75,22 @@ class CandidatesInfo(Base):
     __tablename__ = 'candidates_info'
     __table_args__ = {'extend_existing': True}
 
-    id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
+    id = Column(BigInteger, ForeignKey('user.id'), primary_key=True)  # one-to-one
     nationality = Column(Text)
     gender = Column(Boolean)
     date_of_birth = Column(Date)
     subscription_email = Column(Text)
     skype = Column(Text)
     phone = Column(Text)
+
+
+class CandidatesInterview(Base):
+    __tablename__ = 'candidates_interview'
+    __table_args__ = {'extend_existing': True}
+
+    candidate_id = Column(BigInteger, ForeignKey('user.id'), primary_key=True)
+    staff_id = Column(BigInteger, ForeignKey('user.id'), primary_key=True)
+    interview_date = Column(Date)
 
 
 class CandidatesDocuments(Base):
@@ -85,7 +100,7 @@ class CandidatesDocuments(Base):
     __tablename__ = 'candidates_documents'
     __table_args__ = {'extend_existing': True}
 
-    id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
+    id = Column(BigInteger, ForeignKey('user.id'), primary_key=True)  # one-to-one
     cv = Column(Text)
     letter_of_recommendation = Column(Text)
     motivation_letter = Column(Text)
@@ -97,29 +112,43 @@ class CandidatesDocuments(Base):
 
 class CandidatesStatus(Base):
     """
-    Keeps info about candidate's status which is enum accepted/rejected/waiting_list
+    Keeps info about candidate's status which is integer according to accepted/rejected/waiting_list
     """
     __tablename__ = 'candidates_info'
     __table_args__ = {'extend_existing': True}
 
-    id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
+    id = Column(BigInteger, ForeignKey('users.id'), primary_key=True)  # one-to-one
     status = Column(BigInteger)
 
 
-class CandidatesTests(Base):
+class CandidatesAnswers(Base):
     """
     Keeps info about tests that were passed by candidate
     """
-    __tablename__ = 'candidates_tests'
+    __tablename__ = 'candidates_answers'
     __table_args__ = {'extend_existing': True}
 
     # composite primary key
-    id = Column(BigInteger, ForeignKey('candidates.id'), primary_key=True)  # one-to-one
+    submission_id = Column(BigInteger, ForeignKey('tests_submissions.id'), primary_key=True)  # one-to-one
     question_id = Column(BigInteger, ForeignKey('questions.id'), primary_key=True)
-    start_date = Column(Date, default=datetime.datetime.utcnow)
-    end_date = Column(Date)
-    answer = Column(Text)
-    points = Column(BigInteger)
+    answer = Column(ARRAY(Text))
+    grade = Column(Numeric)
+    comments = Column(Text)
+
+
+class TestsSubmissions(Base):
+    __tablename__ = 'candidates_submissions'
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(BigInteger, primary_key=True)
+    candidate_id = Column(BigInteger, ForeignKey('users.id'))
+    time_start = Column(Date, default=datetime.utc.now)
+    time_end = Column(Date)
+    submitted = Column(Boolean)
+    graded_by = (BigInteger, ForeignKey('users.id'))
+
+    answers = relationship('CandidatesAnswers', cascade="all,delete", backref='questions_tests',
+                           uselist=False)
 
 
 class Questions(Base):
@@ -133,8 +162,10 @@ class Questions(Base):
     manually_grading = Column(Boolean, default=False)
     points = Column(BigInteger)
 
-    questions = relationship('QuestionsTests', cascade="all,delete", backref='questions_tests',
-                             uselist=False)  # one-to-one
+    test = relationship('QuestionsTests', cascade="all,delete", backref='questions_tests',
+                        uselist=False)
+    candidates_answers = relationship('CandidatesAnswers', cascade="all,delete", backref='questions_tests',
+                                      uselist=False)  # one-to-one
 
 
 class QuestionsTests(Base):
@@ -151,9 +182,13 @@ class Tests(Base):
 
     id = Column(BigInteger, primary_key=True)
     test_name = Column(Text)
+    max_time = Column(Date)
+    archived = Column(Boolean)
 
     questions_tests = relationship('QuestionsTests', cascade="all,delete", backref='questions_tests',
                                    uselist=False)  # one-to-one
+    questions = relationship('Questions', cascade="all,delete", backref='questions_tests',
+                             uselist=False)  # one-to-one
 
 
 class ORM:
@@ -207,7 +242,7 @@ class ORM:
         Adds new candidate to the database
         """
         try:
-            new_candidate = Candidate(first_name=first_name, last_name=last_name)
+            new_candidate = Users(first_name=first_name, last_name=last_name)
             self.session.add(new_candidate)
             self.session.commit()
             return new_candidate.id
@@ -251,9 +286,9 @@ class ORM:
         :return: new or existing autorization instance or None in case of error
         """
         try:
-            existing_candidates_autorization = self.session.query(CandidatesAutorization).filter_by(email=email).first()
+            existing_candidates_autorization = self.session.query(UsersAutorization).filter_by(email=email).first()
             if not existing_candidates_autorization:
-                candidate_autorization = CandidatesAutorization(email=email, id=id, password=password)
+                candidate_autorization = UsersAutorization(email=email, id=id, password=password)
                 self.session.add(candidate_autorization)
                 self.session.commit()
                 return candidate_autorization
@@ -305,11 +340,11 @@ class ORM:
         :return: id of the given candidates or None in case of error
         """
         try:
-            existing_candidates_tests = self.session.query(CandidatesTests).filter_by(candidate_id=id,
-                                                                                      question_id=question_id).first()
+            existing_candidates_tests = self.session.query(CandidatesAnswers).filter_by(candidate_id=id,
+                                                                                        question_id=question_id).first()
             if not existing_candidates_tests:
-                candidates_tests = CandidatesTests(id=candidate_id, question_id=question_id, answer=answer,
-                                                   points=None)
+                candidates_tests = CandidatesAnswers(id=candidate_id, question_id=question_id, answer=answer,
+                                                     points=None)
                 self.session.add(candidates_tests)
                 self.session.commit()
                 return candidates_tests.id
@@ -342,49 +377,49 @@ class ORM:
 
     # ------------
     # GET
-    def get_candidate_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's instance by given id
         :param id: id of the candidate
         :return: candidate's instances or None if there is no such candidate
         """
         try:
-            candidate = self.session.query(Candidate).get(id)
+            candidate = self.session.query(Users).get(id)
             return candidate
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get candidate: {excpt}')
         return None
 
-    def get_candidate_name_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_name_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's name by given id
         :param id: id of the candidate
         :return: candidate's name or None if there is no such candidate
         """
         try:
-            candidate = self.session.query(Candidate).get(id)
+            candidate = self.session.query(Users).get(id)
             return candidate.first_name
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get candidate name: {excpt}')
         return None
 
-    def get_candidate_surname_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_surname_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's surname by given id
         :param id: id of the candidate
         :return: candidate's surname or None if there is no such candidate
         """
         try:
-            candidate = self.session.query(Candidate).get(id)
+            candidate = self.session.query(Users).get(id)
             return candidate.last_name
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get candidate surname: {excpt}')
         return None
 
-    def get_candidate_info_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_info_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's info instance by given id
         :param id: id of the candidate
@@ -398,7 +433,7 @@ class ORM:
             print(f'Couldn\'t get candidates info: {excpt}')
         return None
 
-    def get_candidate_nationality_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_nationality_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's nationality by given id
         :param id: id of the candidate
@@ -412,7 +447,7 @@ class ORM:
             print(f'Couldn\'t get candidate nationality: {excpt}')
         return None
 
-    def get_candidate_gender_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_gender_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's gender by given id. Converts it to the male or female instead of boolean value.
         :param id: id of the candidate
@@ -430,7 +465,7 @@ class ORM:
             print(f'Couldn\'t get candidate gender: {excpt}')
         return None
 
-    def get_candidate_age_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_age_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's date of birth and calculates age
         :param id: id of the candidate
@@ -447,7 +482,7 @@ class ORM:
             print(f'Couldn\'t get candidate nationality: {excpt}')
         return None
 
-    def get_candidate_email_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_email_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's email by given id
         :param id: id of the candidate
@@ -461,7 +496,7 @@ class ORM:
             print(f'Couldn\'t get candidate email: {excpt}')
         return None
 
-    def get_candidate_skype_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_skype_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's skype by given id
         :param id: id of the candidate
@@ -475,7 +510,7 @@ class ORM:
             print(f'Couldn\'t get candidate skype: {excpt}')
         return None
 
-    def get_candidate_phone_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_phone_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's phone by given id
         :param id: id of the candidate
@@ -489,7 +524,7 @@ class ORM:
             print(f'Couldn\'t get candidate nationality: {excpt}')
         return None
 
-    def get_candidate_documents_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_documents_by_id(self, id: int) -> Optional[Users]:
         """
         Get candidate's documents instance by given id
         :param id: id of the candidate
@@ -503,7 +538,7 @@ class ORM:
             print(f'Couldn\'t get candidates documents: {excpt}')
         return None
 
-    def get_candidate_cv_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_cv_by_id(self, id: int) -> Optional[Users]:
         """
         Get link to candidate's cv by given id
         :param id: id of the candidate
@@ -517,7 +552,7 @@ class ORM:
             print(f'Couldn\'t get candidates cv: {excpt}')
         return None
 
-    def get_candidate_letter_of_recommendation_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_letter_of_recommendation_by_id(self, id: int) -> Optional[Users]:
         """
         Get link to candidate's letter of recomendation by given id
         :param id: id of the candidate
@@ -531,7 +566,7 @@ class ORM:
             print(f'Couldn\'t get candidates letter of recomendation: {excpt}')
         return None
 
-    def get_candidate_motivation_letter_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_motivation_letter_by_id(self, id: int) -> Optional[Users]:
         """
         Get link to candidate's motivation letter by given id
         :param id: id of the candidate
@@ -545,7 +580,7 @@ class ORM:
             print(f'Couldn\'t get candidates motivation letter: {excpt}')
         return None
 
-    def get_candidate_passport_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_passport_by_id(self, id: int) -> Optional[Users]:
         """
         Get link to candidate's passport by given id
         :param id: id of the candidate
@@ -559,7 +594,7 @@ class ORM:
             print(f'Couldn\'t get candidates passport: {excpt}')
         return None
 
-    def get_candidate_photo_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_photo_by_id(self, id: int) -> Optional[Users]:
         """
         Get link to candidate's photo by given id
         :param id: id of the candidate
@@ -573,7 +608,7 @@ class ORM:
             print(f'Couldn\'t get candidates photo: {excpt}')
         return None
 
-    def get_candidate_project_description_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_project_description_by_id(self, id: int) -> Optional[Users]:
         """
         Get link to candidate's project description by given id
         :param id: id of the candidate
@@ -587,7 +622,7 @@ class ORM:
             print(f'Couldn\'t get candidates project description: {excpt}')
         return None
 
-    def get_candidate_transcript_by_id(self, id: int) -> Optional[Candidate]:
+    def get_candidate_transcript_by_id(self, id: int) -> Optional[Users]:
         """
         Get link to candidate's transcript by given id
         :param id: id of the candidate
@@ -631,7 +666,7 @@ class ORM:
         :return: True if candidate was delete successfully, False if candidate was not found, None in case of error
         """
         try:
-            existiing_candidate = self.session.query(Candidate).filter_by(id=id).first()
+            existiing_candidate = self.session.query(Users).filter_by(id=id).first()
             if existiing_candidate:
                 self.session.delete(existiing_candidate)
                 self.session.commit()
