@@ -28,8 +28,7 @@ class Test(Resource):  # test/id put get delete
     def get(self, test_id):
         if not Utils.is_test_exist(test_id):
             return fail_response(msg="Test is not exist", code=404)
-        models.
-
+        models
 
 class TimerStart(Resource):  # test/id/start post
     @jwt_required
