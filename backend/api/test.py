@@ -20,14 +20,6 @@ class TestsList(Resource):
                         schema:
                             type: array
                             items: TestsSchema
-            403:
-                description: Not authorized
-                content:
-                    application/json:
-                        schema: ErrorSchema
-                        example:
-                          message: [Not allowed for this action]
-
         """
         pass
 
@@ -47,14 +39,6 @@ class TestManagement(Resource):
         responses:
           201:
             description: OK
-
-          403:
-            description: Not authorized
-            content:
-                application/json:
-                    schema: ErrorSchema
-                    example:
-                        message: [Not allowed for this action]
         """
         pass
 
@@ -77,13 +61,6 @@ class TestManagement(Resource):
                 content:
                     application/json:
                         schema: TestsSchema
-            403:
-                description: Not authorized
-                content:
-                    application/json:
-                        schema: ErrorSchema
-                        example:
-                          message: [Not allowed for this action]
             404:
                 description: Not found
                 content:
@@ -115,13 +92,6 @@ class TestManagement(Resource):
         responses:
             201:
                 description: OK
-            403:
-                description: Not authorized
-                content:
-                    application/json:
-                        schema: ErrorSchema
-                        example:
-                          message: [Not allowed for this action]
             404:
                 description: Not found
                 content:
@@ -142,13 +112,6 @@ class TestManagement(Resource):
         responses:
             201:
                 description: OK
-            403:
-                description: Not authorized
-                content:
-                    application/json:
-                        schema: ErrorSchema
-                        example:
-                          message: [Not allowed for this action]
             404:
                 description: Not found
                 content:
@@ -183,13 +146,6 @@ class TestSubmissions(Resource):
                         schema:
                             type: array
                             items: TestsSchema
-            403:
-                description: Not authorized
-                content:
-                    application/json:
-                        schema: ErrorSchema
-                        example:
-                          message: [Not allowed for this action]
             404:
                 description: Not found
                 content:
