@@ -10,6 +10,9 @@ Base = declarative_base()
 
 
 class RevokedToken(Base):
+    """
+    Storage of the token required for authentification
+    """
     __tablename__ = 'revoked_tokens'
     __table_args__ = {'extend_existing': True}
 
@@ -49,6 +52,9 @@ class Users(Base):
 
 
 class Staff(Base):
+    """
+    Keeps id of users with the manager of professor role and their positions
+    """
     __tablename__ = 'staff'
     __table_args__ = {'extend_existing': True}
 
@@ -85,6 +91,9 @@ class CandidatesInfo(Base):
 
 
 class CandidatesInterview(Base):
+    """
+    Keeps data about candidate, interviewer and date of an interview
+    """
     __tablename__ = 'candidates_interview'
     __table_args__ = {'extend_existing': True}
 
@@ -119,6 +128,7 @@ class CandidatesStatus(Base):
 
     id = Column(BigInteger, ForeignKey('users.id'), primary_key=True)  # one-to-one
     status = Column(BigInteger)
+    admission_date = Column(Date)
 
 
 class CandidatesAnswers(Base):
@@ -137,6 +147,9 @@ class CandidatesAnswers(Base):
 
 
 class TestsSubmissions(Base):
+    """
+    Keeps data about tests that were submitted or started by a candidate
+    """
     __tablename__ = 'candidates_submissions'
     __table_args__ = {'extend_existing': True}
 
@@ -152,6 +165,9 @@ class TestsSubmissions(Base):
 
 
 class Questions(Base):
+    """
+    Keeps all questions according to all tests in the system
+    """
     __tablename__ = 'questions'
     __table_args__ = {'extend_existing': True}
 
@@ -169,6 +185,9 @@ class Questions(Base):
 
 
 class QuestionsTests(Base):
+    """
+    Linking table between tests and questions
+    """
     __tablename__ = 'questions_tests'
     __table_args__ = {'extend_existing': True}
 
@@ -177,6 +196,9 @@ class QuestionsTests(Base):
 
 
 class Tests(Base):
+    """
+    All actual and archived tests in the system
+    """
     __tablename__ = 'tests'
     __table_args__ = {'extend_existing': True}
 
