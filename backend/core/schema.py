@@ -63,7 +63,7 @@ class TestsSchema(ModelSchema):
         model = Tests
 
 
-class QuestionSchema(ModelSchema):
+class QuestionsSchema(ModelSchema):
     class Meta:
         model = Questions
 
