@@ -9,6 +9,9 @@ db = application.db
 
 
 class RevokedToken(db.Model):
+    """
+    Storage of the token required for authentification
+    """
     __tablename__ = 'revoked_tokens'
     __table_args__ = {'extend_existing': True}
 
@@ -49,6 +52,9 @@ class Users(db.Model):
 
 
 class Staff(db.Model):
+    """
+    Keeps id of users with the manager of professor role and their positions
+    """
     __tablename__ = 'staff'
     __table_args__ = {'extend_existing': True}
 
@@ -85,6 +91,9 @@ class CandidatesInfo(db.Model):
 
 
 class CandidatesInterview(db.Model):
+    """
+    Keeps data about candidate, interviewer and date of an interview
+    """
     __tablename__ = 'candidates_interview'
     __table_args__ = {'extend_existing': True}
 
@@ -119,9 +128,13 @@ class CandidatesStatus(db.Model):
 
     id = Column(BigInteger, ForeignKey(Users.id), primary_key=True)  # one-to-one
     status = Column(BigInteger)
+    admission_date = Column(Date)
 
 
 class TestsSubmissions(db.Model):
+    """
+    Keeps data about tests that were submitted or started by a candidate
+    """
     __tablename__ = 'candidates_submissions'
     __table_args__ = {'extend_existing': True}
 
@@ -137,6 +150,9 @@ class TestsSubmissions(db.Model):
 
 
 class Questions(db.Model):
+    """
+    Keeps all questions according to all tests in the system
+    """
     __tablename__ = 'questions'
     __table_args__ = {'extend_existing': True}
 
@@ -169,6 +185,9 @@ class CandidatesAnswers(db.Model):
 
 
 class Tests(db.Model):
+    """
+    All actual and archived tests in the system
+    """
     __tablename__ = 'tests'
     __table_args__ = {'extend_existing': True}
 
@@ -184,6 +203,9 @@ class Tests(db.Model):
 
 
 class QuestionsTests(db.Model):
+    """
+    Linking table between tests and questions
+    """
     __tablename__ = 'questions_tests'
     __table_args__ = {'extend_existing': True}
 
