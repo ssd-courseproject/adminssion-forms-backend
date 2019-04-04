@@ -18,7 +18,10 @@ class RevokedToken(db.Model):
     id = Column(BigInteger, primary_key=True)
     jti = Column(Text())
     date = Column(Date)
-    expired = Column(Boolean)
+    expires = Column(Date)
+    revoked = Column(Boolean, default=False)
+    token_type = Column(Text)
+    user_id = Column(BigInteger)
 
 
 class Users(db.Model):
@@ -260,7 +263,7 @@ class ORM:
 
     # ------------
     # ADD
-    def add_candidate(self, first_name: str = None, last_name: str = None) -> Optional[int]:
+    def add_user(self, first_name: str = None, last_name: str = None) -> Optional[int]:
         """
         Adds new candidate to the database
         """
@@ -268,10 +271,22 @@ class ORM:
             new_candidate = Users(first_name=first_name, last_name=last_name)
             self.session.add(new_candidate)
             self.session.commit()
-            return new_candidate.id
+            return new_candidate
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t add new candidate: {excpt}')
+        return None
+
+    def add_token(self, jti, date, expires, token_type, user_id, revoked=False) -> Optional[int]:
+        try:
+            new_token = RevokedToken(jti=jti, date=date, expires=expires, token_type=token_type,
+                                     user_id=user_id, revoked=revoked)
+            self.session.add(new_token)
+            self.session.commit()
+            return new_token
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add new token: {excpt}')
         return None
 
     def add_candidates_info(self, candidate_id, nationaity: str = None, gender: bool = False,
@@ -338,7 +353,8 @@ class ORM:
         :return: id of the given candidate or None in case of error
         """
         try:
-            candidates_documents = CandidatesDocuments(id=id, cv=cv, letter_of_recomendation=letter_of_recommendation,
+            candidates_documents = CandidatesDocuments(id=id, cv=cv,
+                                                       letter_of_recomendation=letter_of_recommendation,
                                                        motivation_letter=motivation_letter, passport=passport,
                                                        photo=photo, project_description=project_description,
                                                        transcript=transcript)
@@ -350,7 +366,8 @@ class ORM:
         print(f'Couldn\'t add candidates documents: {excpt}')
         return None
 
-    def add_candidates_tests(self, candidate_id: int, question_id: int, start_date: Date, end_date: Date, answer: str,
+    def add_candidates_tests(self, candidate_id: int, question_id: int, start_date: Date, end_date: Date,
+                             answer: str,
                              points: str = None) -> Optional[int]:
         """
         Add all question's data according to the given candidate
@@ -398,20 +415,35 @@ class ORM:
             print(f'Couldn\'t add new token: {excpt}')
         return None
 
-    # ------------
-    # GET
+        # ------------
+        # GET
+
     def get_candidate_by_id(self, id: int) -> Optional[Users]:
         """
-        Get candidate's instance by given id
-        :param id: id of the candidate
-        :return: candidate's instances or None if there is no such candidate
+        Get user's instance by given id
+        :param id: id of the user
+        :return: user's instances or None if there is no such candidate
         """
         try:
-            candidate = self.session.query(Users).get(id)
-            return candidate
+            user = self.session.query(Users).get(id)
+            return user
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidate: {excpt}')
+            print(f'Couldn\'t get user: {excpt}')
+        return None
+
+    def get_token(self, id) -> Optional[RevokedToken]:
+        """
+        Get token's instance by given id
+        :param id: id of the token
+        :return: token's instances or None if there is no such token
+        """
+        try:
+            token = self.session.query(RevokedToken).get(id)
+            return token
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get token: {excpt}')
         return None
 
     def get_candidate_name_by_id(self, id: int) -> Optional[Users]:
@@ -659,8 +691,8 @@ class ORM:
             print(f'Couldn\'t get candidates transcript: {excpt}')
         return None
 
-    # ------------
-    # DELETE
+        # ------------
+        # DELETE
 
     def delete_token(self, id: int) -> Optional[int]:
         """
