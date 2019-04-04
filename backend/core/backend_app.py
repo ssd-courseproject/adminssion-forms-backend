@@ -104,9 +104,9 @@ class FormsBackend(object):
     def _add_resource(self, resource: Resource.__class__, path: str, root_name: str = None):
         # print(path)
         self.api.add_resource(resource, path)
-        self._add_resource_spec(resource, path, root_name)
+        self._add_resource_spec(resource, root_name)
 
-    def _add_resource_spec(self, resource: Resource.__class__, path: str, root_name: str = None):
+    def _add_resource_spec(self, resource: Resource.__class__, root_name: str = None):
         """
         Register resource
         """
@@ -118,8 +118,8 @@ class FormsBackend(object):
             self.spec.path(view=method_view)
 
             if root_name is not None:
-                path_1 = FlaskPlugin().path_helper(view=method_view, operations=OrderedDict())
-                spec_path = self.spec._paths[path_1]
+                path = FlaskPlugin().path_helper(view=method_view, operations=OrderedDict())
+                spec_path = self.spec._paths[path]
 
                 for op_name in spec_path:
                     if "tags" not in spec_path[op_name]:
