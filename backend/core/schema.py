@@ -108,3 +108,7 @@ class ProfileInfoSchema(Schema):
     info = fields.Nested(CandidatesInfoSchema, exclude=["user"])
     documents = fields.Nested(CandidatesDocumentsSchema, exclude=["user"])
     status = fields.Nested(CandidatesStatusSchema, exclude=["user"])
+
+
+class TestSummarySchema(Schema):
+    test = fields.Nested(TestsSchema)

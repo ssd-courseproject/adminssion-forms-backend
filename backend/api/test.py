@@ -1,5 +1,8 @@
 from flask_jwt_extended import jwt_required
 from flask_restful import Resource
+from webargs.flaskparser import use_kwargs
+
+from backend.core.schema import TestSummarySchema
 
 
 class TestsList(Resource):
@@ -33,12 +36,23 @@ class TestManagement(Resource):
         pass
 
     @jwt_required
+    @use_kwargs(TestSummarySchema)
     def put(self, test_id):
         """
         ---
         summary: Test update
         description: Saves new test information
-        #todo : add sample doc
+        parameters:
+            - in: path
+              required: true
+              name: test_id
+              schema:
+                  type: int
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema: TestSummarySchema
         """
         pass
 
