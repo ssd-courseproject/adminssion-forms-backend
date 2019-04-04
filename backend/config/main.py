@@ -28,6 +28,37 @@ OPENAPI_META = """
         - name: Submissions
     servers:
         - url: /
+    components:
+        examples:
+            Registration:
+                email: super@innopolis.ru
+                password: 123456
+                name: Super
+                surname: Innopolis
+            ProfileFull:
+                user:
+                  first_name:
+                  last_name:
+                  role:
+                authentication:
+                  email:
+                info:
+                  skype:
+                  subscription_email:
+                  gender:
+                  date_of_birth:
+                  phone:
+                  nationality:
+                documents:
+                  cv:
+                  passport:
+                  transcript:
+                  project_description:
+                  photo:
+                  motivation_letter:
+                  letter_of_recommendation:
+                status:
+                  status:
 """.format(API_VERSION_NUMBER)
 
 SPEC_FILENAME = 'spec.json'
