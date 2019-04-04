@@ -12,7 +12,7 @@ class Config(object):
     STATIC_FOLDER = 'public'
 
 
-API_VERSION_NUMBER = '0.0.4'
+API_VERSION_NUMBER = '0.0.5'
 API_VERSION_LABEL = 'v1'
 
 OPENAPI_META = """
