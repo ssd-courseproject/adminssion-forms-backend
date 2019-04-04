@@ -9,7 +9,7 @@ from backend.helpers import success_response, fail_response
 
 class UserLogin(Resource):
     @use_kwargs(LoginSchema())
-    def post(self, email='', password=''):
+    def post(self, email, password):
         """
         ---
         summary: Login

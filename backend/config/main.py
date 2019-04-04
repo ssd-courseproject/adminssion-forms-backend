@@ -28,7 +28,6 @@ OPENAPI_META = """
         - name: Submissions
     servers:
         - url: /
-          description: Current server
 """.format(API_VERSION_NUMBER)
 
 SPEC_FILENAME = 'spec.json'

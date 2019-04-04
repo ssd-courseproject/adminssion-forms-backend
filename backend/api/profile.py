@@ -27,7 +27,7 @@ class UserProfile(Resource):
         """
         ---
         summary: Profile info
-        description: Gives all information about current user's profile
+        description: All information about current user's profile
         """
         current_user = get_jwt_identity()
 
