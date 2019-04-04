@@ -113,10 +113,10 @@ class CandidatesStatus(Base):
     """
     Keeps info about candidate's status which is integer according to accepted/rejected/waiting_list
     """
-    __tablename__ = 'candidates_info'
+    __tablename__ = 'candidates_status'
     __table_args__ = {'extend_existing': True}
 
-    id = Column(BigInteger, ForeignKey('users.id'), primary_key=True)  # one-to-one
+    id = Column(BigInteger, ForeignKey(Users.id), primary_key=True)  # one-to-one
     status = Column(BigInteger)
 
 
