@@ -4,7 +4,7 @@ from marshmallow import fields
 from marshmallow_sqlalchemy import field_for
 
 from backend.core.models import Users, UsersAutorization, CandidatesInfo, CandidatesInterview, CandidatesDocuments, \
-    CandidatesStatus, CandidatesAnswers, TestsSubmissions, QuestionsTests, Tests
+    CandidatesStatus, CandidatesAnswers, TestsSubmissions, QuestionsTests, Tests, Questions
 
 
 ######
@@ -61,6 +61,11 @@ class QuestionsTestsSchema(ModelSchema):
 class TestsSchema(ModelSchema):
     class Meta:
         model = Tests
+
+
+class QuestionSchema(ModelSchema):
+    class Meta:
+        model = Questions
 
 
 ######
