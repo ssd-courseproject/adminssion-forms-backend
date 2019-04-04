@@ -1,6 +1,6 @@
 error_descriptions = {
     'UserAlreadyExistsError': {
-        'message': ["A user with that username already exists."],
+        'message': ["A user with that email already exists."],
         'status': 409,
     },
     'ResourceDoesNotExist': {

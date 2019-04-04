@@ -3,6 +3,8 @@ flask-restful
 flask-jwt-extended
 flask-sqlalchemy
 flask-cors
+Flask-Migrate
+psycopg2
 passlib
 apispec
 apispec-webframeworks

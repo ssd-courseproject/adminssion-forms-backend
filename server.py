@@ -10,16 +10,11 @@ except ImportError:
     from backend.config.main import Config
 
 flask_app = Flask(__name__, static_url_path=Config.STATIC_URL_PATH, static_folder=Config.STATIC_FOLDER)
+application = FormsBackend(flask_app)
 
 
 def init_app():
-    app = FormsBackend(flask_app)
-    app.init()
-
-    return app
-
-
-application = init_app()
+    application.init()
 
 
 def extend_app():
@@ -36,5 +31,10 @@ def write_spec():
     write_public_file(SPEC_FILENAME, generate_spec(application))
 
 
+def get_application():
+    return application
+
+
+init_app()
 extend_app()
 write_spec()
