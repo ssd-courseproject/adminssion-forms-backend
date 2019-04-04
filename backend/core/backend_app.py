@@ -1,50 +1,129 @@
+from collections import OrderedDict
+
+import yaml
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from flask_restful import Api
+from flask_marshmallow import Marshmallow
+from flask_restful import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec_webframeworks.flask import FlaskPlugin
 
-from backend.api import auth, profile,test
+from backend.api import auth, profile, test, submission
+from backend.config.main import OPENAPI_META
+from backend.core.errors import error_descriptions
 
 try:
-    from backend.config import main_local
+    from backend.config.main_local import LocalConfig as Config
 except ImportError:
-    from backend.config import main as main_local
+    from backend.config.main import Config
 
 
 class FormsBackend(object):
-
-    def __init__(self, flask_app):
-        errors = {
-            'UserAlreadyExistsError': {
-                'message': "A user with that username already exists.",
-                'status': 409,
+    routes = {
+        'auth': {
+            'login': auth.UserLogin,
+            'logout': auth.UserLogout,
+            'refresh': auth.TokenRefresh,
+        },
+        'profile': {
+            '': profile.UserProfile,
+            'register': profile.UserRegistration,
+        },
+        'tests': {
+            '<int:test_id>': {
+                '': test.TestManagement,
+                'start': test.TestStart,
+                'submissions': test.TestSubmissions,
             },
-            'ResourceDoesNotExist': {
-                'message': "A resource with that ID no longer exists.",
-                'status': 410,
-                'extra': "Any extra information you want.",
+            'list': test.TestsList,
+        },
+        'submissions': {
+            '<int:submission_id>': {
+                '': submission.SubmissionsManagement,
+                'checkpoint': submission.SubmissionCheckpoint,
+                'complete': submission.SubmissionComplete,
             },
         }
+    }
 
+    def __init__(self, flask_app):
         self.app = flask_app
-        self.api = Api(self.app, errors=errors)
+        self.api = Api(self.app, errors=error_descriptions)
         self.db = SQLAlchemy(self.app)
         self.jwt = JWTManager(self.app)
         self.cors = CORS(self.app)
+        self.ma = Marshmallow(self.app)
+        self.spec = self._init_api_spec()
 
     def init(self):
-        try:
-            self.app.config.from_object(main_local.LocalConfig)
-        except:
-            self.app.config.from_object(main_local.DefaultConfig)
+        self.app.config.from_object(Config)
 
-        self.api.add_resource(auth.UserLogin, '/auth/login')
-        self.api.add_resource(auth.UserLogout, '/auth/logout')
-        self.api.add_resource(auth.TokenRefresh, '/auth/refresh')
-        self.api.add_resource(profile.UserRegistration, '/profile/register')
-        self.api.add_resource(profile.UserProfile, '/profile')
-        self.api.add_resource(test.TestList, '/test')
+        self._add_routes(self.routes)
+
+    def _init_api_spec(self):
+        settings = yaml.safe_load(OPENAPI_META)
+
+        title = settings["info"].pop("title")
+        spec_version = settings["info"].pop("version")
+        openapi_version = settings.pop("openapi")
+
+        spec = APISpec(
+            title=title,
+            version=spec_version,
+            openapi_version=openapi_version,
+            plugins=[FlaskPlugin(), MarshmallowPlugin()],
+            **settings
+        )
+        # validate_spec(spec)
+
+        return spec
+
+    def _add_routes(self, routes, prefix='', root_name=None):
+        for path in routes:
+            s_path = path.strip('/')
+
+            if root_name is not None:
+                loc_root = root_name
+            elif len(s_path) > 0:
+                loc_root = s_path.title()
+            else:
+                loc_root = None
+
+            p_path = (prefix + '/' + s_path).rstrip('/')
+            route = routes[path]
+
+            if isinstance(route, dict):
+                self._add_routes(route, prefix=p_path, root_name=loc_root)
+            elif issubclass(route, Resource):
+                self._add_resource(route, path=p_path, root_name=root_name)
+            else:
+                raise Exception("Unknown route type")
+
+    def _add_resource(self, resource: Resource.__class__, path: str, root_name: str = None):
+        # print(path)
+        self.api.add_resource(resource, path)
+        self._add_resource_spec(resource, root_name)
+
+    def _add_resource_spec(self, resource: Resource.__class__, root_name: str = None):
+        """
+        Register resource
+        """
+        method_name = resource.__name__.lower()
+        method_view = self.app.view_functions[method_name]
+
+        with self.app.test_request_context():
+            # self.spec.add_path(resource=resource, api=application.api)
+            self.spec.path(view=method_view)
+
+            if root_name is not None:
+                path = FlaskPlugin().path_helper(view=method_view, operations=OrderedDict())
+                spec_path = self.spec._paths[path]
+
+                for op_name in spec_path:
+                    if "tags" not in spec_path[op_name]:
+                        spec_path[op_name]["tags"] = [root_name]
 
     def run(self, *args, **kwargs):
-        self.app.config['PROPAGATE_EXCEPTIONS'] = False
         self.app.run(*args, **kwargs)

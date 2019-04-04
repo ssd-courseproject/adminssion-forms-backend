@@ -1,4 +1,3 @@
-from backend.server import run_app
+from server import application
 
-if __name__ == '__main__':
-    app = run_app(debug=True, host='0.0.0.0')
+application.run(debug=True)

@@ -1,49 +1,96 @@
+from flask import jsonify
 from flask_jwt_extended import jwt_required, jwt_refresh_token_required, get_jwt_identity, create_access_token, \
     get_raw_jwt, create_refresh_token
-from flask_restful import Resource, reqparse
+from flask_restful import Resource
+from webargs.flaskparser import use_args, use_kwargs
 
+from backend.core.schema import TokensSchema, LoginSchema
 from backend.helpers import success_response, fail_response
-
-login_parser = reqparse.RequestParser()
-login_parser.add_argument('username', help='Username cannot be blank', trim=True, required=True)
-login_parser.add_argument('password', help='Password cannot be blank', trim=True, required=True)
 
 
 class UserLogin(Resource):
-    def post(self):
-        data = login_parser.parse_args()
-        username = data.username
-        password = data.password
+    @use_kwargs(LoginSchema)
+    def post(self, email, password):
+        """
+        ---
+        summary: Login
+        description: Get JWT tokens
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema: LoginSchema
+              example:
+                email: super@innopolis.ru
+                password: 123456
+        responses:
+          200:
+            description: OK
+            content:
+              application/json:
+                schema: TokensSchema
+                example:
+                  access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE1NTQzMDU1MjYsIm5iZiI6MTU1NDMwNTUyNiwianRpIjoiNzk3ZWZhYWQtZTI4ZS00ZTIyLWE2N2EtZTBmYjA4ZmI1NTY5IiwiZXhwIjoxNTU0MzA2NDI2LCJpZGVudGl0eSI6InN1cGVyQGlubm9wb2xpcy5ydSIsImZyZXNoIjpmYWxzZSwidHlwZSI6ImFjY2VzcyJ9.hvsxNM9SjBapbv1WzpGnn0G5T8N0amAANM9i2woP0kk
+                  refresh_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE1NTQzMDU1MjYsIm5iZiI6MTU1NDMwNTUyNiwianRpIjoiNjA1Mzc3OTktY2NhMy00MjM3LTkwMmUtZmE3NTNjODM5M2RkIiwiZXhwIjoxNTU2ODk3NTI2LCJpZGVudGl0eSI6InN1cGVyQGlubm9wb2xpcy5ydSIsInR5cGUiOiJyZWZyZXNoIn0.MJQ5eOZQHz8_fq698uJ0Je8PhwX_ZE25dJtS_HNec3E
+          409:
+            description: User already exists
+            content:
+              application/json:
+                schema: ErrorSchema
+                example:
+                  message: [User with such email already exists]
+        """
+        access_token = create_access_token(identity=email)
+        refresh_token = create_refresh_token(identity=email)
 
-        access_token = create_access_token(identity=username)
-        refresh_token = create_refresh_token(identity=username)
+        if email != 'super@innopolis.ru' or password != 'great':
+            return fail_response('Bad email or password', 406)
 
-        if username != 'inno' or password != 'great':
-            return fail_response('Bad username or password', 401)
-
-        return success_response(
-            msg='Logged in as {}'.format(username),
-            access_token=access_token,
-            refresh_token=refresh_token
-        )
+        return TokensSchema().dump({
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+        })
 
 
 class UserLogout(Resource):
     @jwt_required
     def post(self):
+        """
+        ---
+        summary: Logout
+        description: Revokes JWT token
+        responses:
+          202:
+            description: OK
+        """
         jti = get_raw_jwt()['jti']
         try:
             # revoked_token = RevokedTokenModel(jti=jti)
             # revoked_token.add()
-            return success_response('Access token has been revoked')
+            return jsonify(), 202
         except:
-            return fail_response('Something went wrong')
+            return fail_response('Something went wrong', code=500)
 
 
 class TokenRefresh(Resource):
     @jwt_refresh_token_required
     def post(self):
+        """
+        ---
+        summary: Token refresh
+        description: Gives new `access_token`, requires `refresh_token`
+        responses:
+          200:
+            description: OK
+            content:
+              application/json:
+                schema: TokensSchema
+                example:
+                  access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE1NTQzMDU1MjYsIm5iZiI6MTU1NDMwNTUyNiwianRpIjoiNzk3ZWZhYWQtZTI4ZS00ZTIyLWE2N2EtZTBmYjA4ZmI1NTY5IiwiZXhwIjoxNTU0MzA2NDI2LCJpZGVudGl0eSI6InN1cGVyQGlubm9wb2xpcy5ydSIsImZyZXNoIjpmYWxzZSwidHlwZSI6ImFjY2VzcyJ9.hvsxNM9SjBapbv1WzpGnn0G5T8N0amAANM9i2woP0kk
+        """
         current_user = get_jwt_identity()
         access_token = create_access_token(identity=current_user)
 
-        return success_response(access_token=access_token)
+        return TokensSchema().dump({
+            'access_token': access_token
+        })
