@@ -34,8 +34,8 @@ class UserRegistration(Resource):
                 example:
                   message: [A user with that email already exists.]
         """
-        application.add_candidate()
-        application.add_candidates_autorization()
+        user = application.orm.add_user(first_name=args["name"], last_name=args["surname"])
+        auth_info = application.orm.add_candidates_autorization(id=user.id, email=args["email"], password=args["password"])
 
         return jsonify(), 201
 
