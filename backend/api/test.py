@@ -1,9 +1,11 @@
 from flask_jwt_extended import jwt_required, jwt_refresh_token_required, get_jwt_identity, create_access_token, \
     get_raw_jwt, create_refresh_token
 from flask_restful import Resource, reqparse
+from flask import request
 
-from backend.helpers import fail_response,success_response
+from backend.helpers import fail_response, success_response
 from backend.core import models
+
 
 class TestList(Resource):  # /test
     @jwt_required
@@ -12,7 +14,10 @@ class TestList(Resource):  # /test
 
     @jwt_required
     def get(self):
-        pass
+        links = [request.host_url + 'test/1']
+        return success_response(
+            tests=links
+        )
 
 
 class Test(Resource):  # test/id put get delete
@@ -28,7 +33,13 @@ class Test(Resource):  # test/id put get delete
     def get(self, test_id):
         if not Utils.is_test_exist(test_id):
             return fail_response(msg="Test is not exist", code=404)
-        models
+
+        return success_response(
+            name="Bachelor test",
+            question="Do you like inno",
+            answer=""
+        )
+
 
 class TimerStart(Resource):  # test/id/start post
     @jwt_required

@@ -3,7 +3,7 @@ from flask_jwt_extended import JWTManager
 from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 
-from backend.api import auth, profile
+from backend.api import auth, profile,test
 
 try:
     from backend.config import main_local
@@ -43,6 +43,7 @@ class FormsBackend(object):
         self.api.add_resource(auth.TokenRefresh, '/auth/refresh')
         self.api.add_resource(profile.UserRegistration, '/profile/register')
         self.api.add_resource(profile.UserProfile, '/profile')
+        self.api.add_resource(test.TestList, '/test')
 
     def run(self, *args, **kwargs):
         self.app.config['PROPAGATE_EXCEPTIONS'] = False
