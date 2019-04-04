@@ -1,5 +1,5 @@
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from flask_restful import Resource, abort, reqparse
+from flask_restful import Resource, reqparse
 
 from backend.helpers import success_response
 
@@ -26,7 +26,7 @@ class UserProfile(Resource):
     def get(self):
         """
         ---
-        summary: Profile
+        summary: Profile info
         description: Gives all information about current user's profile
         """
         current_user = get_jwt_identity()
@@ -44,7 +44,7 @@ class UserProfile(Resource):
     def put(self):
         """
         ---
-        summary: Profile
+        summary: Profile update
         description: Updates user profile data
         """
         return success_response()

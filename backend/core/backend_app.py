@@ -1,3 +1,6 @@
+from collections import OrderedDict
+
+import yaml
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
@@ -7,8 +10,8 @@ from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
 from apispec_webframeworks.flask import FlaskPlugin
 
-from backend.api import auth, profile
-from backend.config.main import OPENAPI_VERSION, API_VERSION_NUMBER, APP_NAME, APP_DESCRIPTION
+from backend.api import auth, profile, test, submission
+from backend.config.main import OPENAPI_META
 from backend.core.errors import error_descriptions
 
 try:
@@ -27,6 +30,21 @@ class FormsBackend(object):
         'profile': {
             '': profile.UserProfile,
             'register': profile.UserRegistration,
+        },
+        'tests': {
+            '<int:test_id>': {
+                '': test.TestManagement,
+                'start': test.TestStart,
+                'submissions': test.TestSubmissions,
+            },
+            'list': test.TestsList,
+        },
+        'submissions': {
+            '<int:submission_id>': {
+                '': submission.SubmissionsManagement,
+                'checkpoint': submission.SubmissionCheckpoint,
+                'complete': submission.SubmissionComplete,
+            },
         }
     }
 
@@ -37,39 +55,58 @@ class FormsBackend(object):
         self.jwt = JWTManager(self.app)
         self.cors = CORS(self.app)
         self.ma = Marshmallow(self.app)
-
-        self.spec = APISpec(
-            title=APP_NAME,
-            version=API_VERSION_NUMBER,
-            openapi_version=OPENAPI_VERSION,
-            plugins=[FlaskPlugin(), MarshmallowPlugin()],
-            info={'description': APP_DESCRIPTION},
-            servers=[{'url': '/'}]
-        )
+        self.spec = self._init_api_spec()
 
     def init(self):
         self.app.config.from_object(Config)
 
         self._add_routes(self.routes)
 
-    def _add_routes(self, routes, prefix=''):
+    def _init_api_spec(self):
+        settings = yaml.safe_load(OPENAPI_META)
+
+        title = settings["info"].pop("title")
+        spec_version = settings["info"].pop("version")
+        openapi_version = settings.pop("openapi")
+
+        spec = APISpec(
+            title=title,
+            version=spec_version,
+            openapi_version=openapi_version,
+            plugins=[FlaskPlugin(), MarshmallowPlugin()],
+            **settings
+        )
+        # validate_spec(spec)
+
+        return spec
+
+    def _add_routes(self, routes, prefix='', root_name=None):
         for path in routes:
-            p_path = (prefix + '/' + path.strip('/')).rstrip('/')
+            s_path = path.strip('/')
+
+            if root_name is not None:
+                loc_root = root_name
+            elif len(s_path) > 0:
+                loc_root = s_path.title()
+            else:
+                loc_root = None
+
+            p_path = (prefix + '/' + s_path).rstrip('/')
             route = routes[path]
 
             if isinstance(route, dict):
-                self._add_routes(route, prefix=p_path)
+                self._add_routes(route, prefix=p_path, root_name=loc_root)
             elif issubclass(route, Resource):
-                self._add_resource(route, path=p_path)
+                self._add_resource(route, path=p_path, root_name=root_name)
             else:
                 raise Exception("Unknown route type")
 
-    def _add_resource(self, resource: Resource.__class__, path: str):
+    def _add_resource(self, resource: Resource.__class__, path: str, root_name: str = None):
+        # print(path)
         self.api.add_resource(resource, path)
+        self._add_resource_spec(resource, path, root_name)
 
-        self._add_resource_spec(resource)
-
-    def _add_resource_spec(self, resource: Resource.__class__):
+    def _add_resource_spec(self, resource: Resource.__class__, path: str, root_name: str = None):
         """
         Register resource
         """
@@ -79,6 +116,14 @@ class FormsBackend(object):
         with self.app.test_request_context():
             # self.spec.add_path(resource=resource, api=application.api)
             self.spec.path(view=method_view)
+
+            if root_name is not None:
+                path_1 = FlaskPlugin().path_helper(view=method_view, operations=OrderedDict())
+                spec_path = self.spec._paths[path_1]
+
+                for op_name in spec_path:
+                    if "tags" not in spec_path[op_name]:
+                        spec_path[op_name]["tags"] = [root_name]
 
     def run(self, *args, **kwargs):
         self.app.run(*args, **kwargs)

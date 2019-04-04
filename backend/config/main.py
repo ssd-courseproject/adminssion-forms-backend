@@ -12,11 +12,23 @@ class Config(object):
     STATIC_FOLDER = 'public'
 
 
-APP_NAME = 'Admission Portal'
-APP_DESCRIPTION = 'IU admission portal backend API (prototype)'
-
 API_VERSION_NUMBER = '0.0.4'
 API_VERSION_LABEL = 'v1'
-OPENAPI_VERSION = '3.0.2'
+
+OPENAPI_META = """
+    openapi: 3.0.2
+    info:
+        description: 'IU admission portal backend API (prototype)'
+        title: 'Admission Portal'
+        version: {}
+    tags:
+        - name: Auth
+        - name: Profile
+        - name: Tests
+        - name: Submissions
+    servers:
+        - url: /
+          description: Current server
+""".format(API_VERSION_NUMBER)
 
 SPEC_FILENAME = 'spec.json'
