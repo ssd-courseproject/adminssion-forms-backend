@@ -113,7 +113,7 @@ class TestManagement(Resource):
                 application/json:
                   schema: TestsSchema
         responses:
-            200:
+            201:
                 description: OK
             403:
                 description: Not authorized
@@ -137,15 +137,10 @@ class TestManagement(Resource):
     def delete(self, test_id):
         """
         ---
-        summary: Change test by id
-        description: Changes test
-        requestBody:
-            required: true
-            content:
-                application/json:
-                  schema: TestsSchema
+        summary: Delete test by id
+        description: Deletes test
         responses:
-            200:
+            201:
                 description: OK
             403:
                 description: Not authorized
@@ -173,6 +168,35 @@ class TestSubmissions(Resource):
         ---
         summary: Test submissions
         description: List of all submissions for given test
+        parameters:
+            - in: path
+              required: true
+              name: test_id
+              schema:
+                  type: int
+
+        responses:
+            200:
+                description: OK
+                content:
+                    application/json:
+                        schema:
+                            type: array
+                            items: TestsSchema
+            403:
+                description: Not authorized
+                content:
+                    application/json:
+                        schema: ErrorSchema
+                        example:
+                          message: [Not allowed for this action]
+            404:
+                description: Not found
+                content:
+                    application/json:
+                        schema: ErrorSchema
+                        example:
+                          message: [Test not found]
         """
         pass
 
@@ -184,5 +208,8 @@ class TestStart(Resource):
         ---
         summary: Test start
         description: Starts picked test for user and creates empty submission checkpoint
+        responses:
+            200:
+                description: OK
         """
         pass
