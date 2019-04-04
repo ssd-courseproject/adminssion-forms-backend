@@ -2,23 +2,23 @@ from typing import Set, List, Optional, Tuple
 from sqlalchemy import create_engine, Column, Date, Boolean, Text, BigInteger, ForeignKey, ForeignKeyConstraint, \
     UniqueConstraint, Numeric, Enum, ARRAY
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import date, datetime
+from server import application
 
-Base = declarative_base()
+db = application.db
 
 
-class RevokedToken(Base):
+class RevokedToken(db.Model):
     __tablename__ = 'revoked_tokens'
     __table_args__ = {'extend_existing': True}
 
     id = Column(BigInteger, primary_key=True)
-    jti = Column(Text(120))
+    jti = Column(Text())
     date = Column(Date)
     expired = Column(Boolean)
 
 
-class Users(Base):
+class Users(db.Model):
     """
     Keeps the general info about candidates such as Name, Surname and id
     """
@@ -40,14 +40,15 @@ class Users(Base):
     submission = relationship('TestsSubmissions', cascade="all,delete", backref='user',
                               uselist=False)  # one-to-one
     candidates_interview = relationship('CandidatesInterview', cascade="all,delete", backref='candidate',
-                                        primaryjoin="Users.id == CandidatesInterview.candidate_id", uselist=False)  # one-to-one
+                                        primaryjoin="Users.id == CandidatesInterview.candidate_id",
+                                        uselist=False)  # one-to-one
     staff_interview = relationship('CandidatesInterview', cascade="all,delete", backref='staff',
                                    primaryjoin="Users.id == CandidatesInterview.staff_id", uselist=False)  # one-to-one
     staff_positions = relationship('Staff', cascade="all,delete", backref='user',
                                    uselist=False)  # one-to-one
 
 
-class Staff(Base):
+class Staff(db.Model):
     __tablename__ = 'staff'
     __table_args__ = {'extend_existing': True}
 
@@ -55,7 +56,7 @@ class Staff(Base):
     position = Column(Text)
 
 
-class UsersAutorization(Base):
+class UsersAutorization(db.Model):
     """
     Keeps data email and password for candidates' authorization
     """
@@ -67,7 +68,7 @@ class UsersAutorization(Base):
     password = Column(Text)
 
 
-class CandidatesInfo(Base):
+class CandidatesInfo(db.Model):
     """
     Keeps info about each candidate such as nationality, gender, date of birth and email
     """
@@ -83,7 +84,7 @@ class CandidatesInfo(Base):
     phone = Column(Text)
 
 
-class CandidatesInterview(Base):
+class CandidatesInterview(db.Model):
     __tablename__ = 'candidates_interview'
     __table_args__ = {'extend_existing': True}
 
@@ -92,7 +93,7 @@ class CandidatesInterview(Base):
     interview_date = Column(Date)
 
 
-class CandidatesDocuments(Base):
+class CandidatesDocuments(db.Model):
     """
     Keeps link on candidate's documents
     """
@@ -109,7 +110,7 @@ class CandidatesDocuments(Base):
     transcript = Column(Text)
 
 
-class CandidatesStatus(Base):
+class CandidatesStatus(db.Model):
     """
     Keeps info about candidate's status which is integer according to accepted/rejected/waiting_list
     """
@@ -120,7 +121,7 @@ class CandidatesStatus(Base):
     status = Column(BigInteger)
 
 
-class TestsSubmissions(Base):
+class TestsSubmissions(db.Model):
     __tablename__ = 'candidates_submissions'
     __table_args__ = {'extend_existing': True}
 
@@ -135,26 +136,11 @@ class TestsSubmissions(Base):
                            uselist=False)
 
 
-class CandidatesAnswers(Base):
-    """
-    Keeps info about tests that were passed by candidate
-    """
-    __tablename__ = 'candidates_answers'
-    __table_args__ = {'extend_existing': True}
-
-    # composite primary key
-    submission_id = Column(BigInteger, ForeignKey(TestsSubmissions.id), primary_key=True)  # one-to-one
-    question_id = Column(BigInteger, ForeignKey('questions.id'), primary_key=True)
-    answer = Column(ARRAY(Text))
-    grade = Column(Numeric)
-    comments = Column(Text)
-
-
-class Questions(Base):
+class Questions(db.Model):
     __tablename__ = 'questions'
     __table_args__ = {'extend_existing': True}
 
-    id = Column(BigInteger, ForeignKey('questions_tests.question_id'), primary_key=True)
+    id = Column(BigInteger, primary_key=True)
     question = Column(Text)
     question_type = Column(BigInteger)
     answer = Column(Text)
@@ -163,11 +149,26 @@ class Questions(Base):
 
     test = relationship('QuestionsTests', cascade="all,delete", backref='questions',
                         primaryjoin="Questions.id == QuestionsTests.question_id", uselist=False)
-    #candidates_answers = relationship('CandidatesAnswers', cascade="all,delete", backref='questions_tests', # todo: is required?
-                                      #uselist=False)  # one-to-one
+    # candidates_answers = relationship('CandidatesAnswers', cascade="all,delete", backref='questions_tests', # todo: is required?
+    # uselist=False)  # one-to-one
 
 
-class Tests(Base):
+class CandidatesAnswers(db.Model):
+    """
+    Keeps info about tests that were passed by candidate
+    """
+    __tablename__ = 'candidates_answers'
+    __table_args__ = {'extend_existing': True}
+
+    # composite primary key
+    submission_id = Column(BigInteger, ForeignKey(TestsSubmissions.id), primary_key=True)  # one-to-one
+    question_id = Column(BigInteger, ForeignKey(Questions.id), primary_key=True)
+    answer = Column(ARRAY(Text))
+    grade = Column(Numeric)
+    comments = Column(Text)
+
+
+class Tests(db.Model):
     __tablename__ = 'tests'
     __table_args__ = {'extend_existing': True}
 
@@ -178,11 +179,11 @@ class Tests(Base):
 
     questions_tests = relationship('QuestionsTests', cascade="all,delete", backref='tests',
                                    uselist=False)  # one-to-one
-    #questions = relationship('Questions', cascade="all,delete", backref='questions_tests', # todo: is required?
-                            # uselist=False)  # one-to-one
+    # questions = relationship('Questions', cascade="all,delete", backref='questions_tests', # todo: is required?
+    # uselist=False)  # one-to-one
 
 
-class QuestionsTests(Base):
+class QuestionsTests(db.Model):
     __tablename__ = 'questions_tests'
     __table_args__ = {'extend_existing': True}
 
@@ -197,9 +198,10 @@ class ORM:
     """
 
     def __init__(self):
-        POSTGRES_ADDRESS = self.get_postgres_address('posgres', 'qwerty987', 'admissionDB', 'localhost', 5432)
-        self.engine = create_engine(POSTGRES_ADDRESS, client_encoding='utf8')
-        self.session = self._get_session()
+        self.session = db.session
+        # POSTGRES_ADDRESS = self.get_postgres_address('posgres', 'qwerty987', 'admissionDB', 'localhost', 5432)
+        # self.engine = create_engine(POSTGRES_ADDRESS, client_encoding='utf8')
+        # self.session = self._get_session()
 
     # ------------
     # SESSION

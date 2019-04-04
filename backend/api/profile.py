@@ -1,16 +1,10 @@
 from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from flask_restful import Resource, reqparse
+from flask_restful import Resource
 from webargs.flaskparser import use_args
 
 from backend.core.schema import RegistrationSchema
 from backend.helpers import success_response
-
-register_parser = reqparse.RequestParser()
-register_parser.add_argument('name', help='Name cannot be blank', trim=True, required=True)
-register_parser.add_argument('surname', help='Surname cannot be blank', trim=True, required=True)
-register_parser.add_argument('email', help='Email cannot be blank', trim=True, required=True)
-register_parser.add_argument('password', help='Password cannot be blank', trim=True, required=True)
 
 
 class UserRegistration(Resource):
@@ -26,10 +20,7 @@ class UserRegistration(Resource):
             application/json:
               schema: RegistrationSchema
               example:
-                email: super@innopolis.ru
-                password: 123456
-                name: Super
-                surname: Innopolis
+                $ref: '#/components/examples/Registration'
         responses:
           201:
             description: OK
@@ -58,29 +49,7 @@ class UserProfile(Resource):
               application/json:
                 schema: ProfileInfoSchema
                 example:
-                    user:
-                      first_name:
-                      last_name:
-                      role:
-                    authentication:
-                      email:
-                    info:
-                      skype:
-                      subscription_email:
-                      gender:
-                      date_of_birth:
-                      phone:
-                      nationality:
-                    documents:
-                      cv:
-                      passport:
-                      transcript:
-                      project_description:
-                      photo:
-                      motivation_letter:
-                      letter_of_recommendation:
-                    status:
-                      status:
+                    $ref: '#/components/examples/ProfileFull'
         """
         current_user = get_jwt_identity()
 

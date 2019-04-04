@@ -4,13 +4,13 @@ import yaml
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
+from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
 from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
 from apispec_webframeworks.flask import FlaskPlugin
 
-from backend.api import auth, profile, test, submission
 from backend.config.main import OPENAPI_META
 from backend.core.errors import error_descriptions
 
@@ -21,46 +21,50 @@ except ImportError:
 
 
 class FormsBackend(object):
-    routes = {
-        'auth': {
-            'login': auth.UserLogin,
-            'logout': auth.UserLogout,
-            'refresh': auth.TokenRefresh,
-        },
-        'profile': {
-            '': profile.UserProfile,
-            'register': profile.UserRegistration,
-        },
-        'tests': {
-            '<int:test_id>': {
-                '': test.TestManagement,
-                'start': test.TestStart,
-                'submissions': test.TestSubmissions,
-            },
-            'list': test.TestsList,
-        },
-        'submissions': {
-            '<int:submission_id>': {
-                '': submission.SubmissionsManagement,
-                'checkpoint': submission.SubmissionCheckpoint,
-                'complete': submission.SubmissionComplete,
-            },
-        }
-    }
-
     def __init__(self, flask_app):
         self.app = flask_app
+        self.app.config.from_object(Config)
+
         self.api = Api(self.app, errors=error_descriptions)
         self.db = SQLAlchemy(self.app)
+        self.migrate = Migrate(self.app, self.db)
         self.jwt = JWTManager(self.app)
         self.cors = CORS(self.app)
         self.ma = Marshmallow(self.app)
         self.spec = self._init_api_spec()
 
     def init(self):
-        self.app.config.from_object(Config)
+        self._add_routes(self._get_routes())
 
-        self._add_routes(self.routes)
+    def _get_routes(self):
+        from backend.api import auth, profile, test, submission
+
+        return {
+            'auth': {
+                'login': auth.UserLogin,
+                'logout': auth.UserLogout,
+                'refresh': auth.TokenRefresh,
+            },
+            'profile': {
+                '': profile.UserProfile,
+                'register': profile.UserRegistration,
+            },
+            'tests': {
+                '<int:test_id>': {
+                    '': test.TestManagement,
+                    'start': test.TestStart,
+                    'submissions': test.TestSubmissions,
+                },
+                'list': test.TestsList,
+            },
+            'submissions': {
+                '<int:submission_id>': {
+                    '': submission.SubmissionsManagement,
+                    'checkpoint': submission.SubmissionCheckpoint,
+                    'complete': submission.SubmissionComplete,
+                },
+            }
+        }
 
     def _init_api_spec(self):
         settings = yaml.safe_load(OPENAPI_META)
