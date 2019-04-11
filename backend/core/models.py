@@ -366,59 +366,49 @@ class ORM:
         print(f'Couldn\'t add candidates documents: {excpt}')
         return None
 
-    def add_candidates_tests(self, candidate_id: int, question_id: int, start_date: Date, end_date: Date,
-                             answer: str,
-                             points: str = None) -> Optional[int]:
+    # tests adding
+    def add_question(self, question: str, question_type: int, answer: [str], manually_grading: bool, points: float,
+                     test_id: int) -> Optional[int]:
         """
-        Add all question's data according to the given candidate
-        :param candidate_id: id of the candidate
-        :param question_id: id of the question
-        :param start_date: moment when the passing of test were started
-        :param end_date: moment when test should be closed
-        :param answer: answer of the given candidate
-        :param points: points earned for this question by given candidate
-        :return: id of the given candidates or None in case of error
-        """
-        try:
-            existing_candidates_tests = self.session.query(CandidatesAnswers).filter_by(candidate_id=id,
-                                                                                        question_id=question_id).first()
-            if not existing_candidates_tests:
-                candidates_tests = CandidatesAnswers(id=candidate_id, question_id=question_id, answer=answer,
-                                                     points=None)
-                self.session.add(candidates_tests)
-                self.session.commit()
-                return candidates_tests.id
-            else:
-                # case of changing the answer
-                existing_candidates_tests.answer = answer
-                self.session.commit()
-                return existing_candidates_tests.id
-        except Exception as excpt:
-            self.session.rollback()
-        print(f'Couldn\'t add candidates test: {excpt}')
-        return None
-
-    def add_token(self, id: str, jti: str) -> Optional[int]:
-        """
-        Add new token to the database
-        :param id: id of new token
-        :param jti: jti token
-        :return: id of added token or None in case of error
+        Adds new question to the questions table. Also adds pair question_id, test_id to the question_tests linking
+        table.
+        :param question: the text of the question including answers to choose
+        :param question_type: type of question that maps to single choice, multiple choice and open question
+        :param answer: the right answer to this question. If it is open question this field will be empty
+        :param manually_grading: true for open questions
+        :param points: points that can be earn for this question
+        :param test_id: id of the test that includes this question
+        :return:
         """
         try:
-            new_token = RevokedToken(id=id, jti=jti, date=datetime.utcnow())
-            self.session.add(new_token)
+            new_question = Questions(question=question, question_type=question_type, answer=answer,
+                                     manually_grading=manually_grading, points=points)
+            new_questions_tests = QuestionsTests(question_id=new_question.id, test_id=test_id)
+            self.session.add(new_question)
+            self.session.add(new_questions_tests)
             self.session.commit()
-            return new_token.id
+            return new_question.id
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t add new token: {excpt}')
+        print(f'Couldn\'t add question: {excpt}')
         return None
 
-        # ------------
-        # GET
+    def add_test(self, test_name: str, max_time: int, archived: bool = False) -> Optional[int]:
 
-    def get_candidate_by_id(self, id: int) -> Optional[Users]:
+        try:
+            new_test = Tests(test_name=test_name, max_time=max_time, archived=archived)
+            self.session.add(new_test)
+            self.session.commit()
+            return new_test.id
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t add test: {excpt}')
+        return None
+
+    # ------------
+    # GET
+
+    def get_user(self, id: int) -> Optional[Users]:
         """
         Get user's instance by given id
         :param id: id of the user
@@ -691,8 +681,50 @@ class ORM:
             print(f'Couldn\'t get candidates transcript: {excpt}')
         return None
 
-        # ------------
-        # DELETE
+    def get_test(self, id: int) -> Optional[Tests]:
+        """
+        Takes test instance from the database by test id
+        :param id: id of the test
+        :return: test instance from the database. Or None if test was not found
+        """
+        try:
+            test = self.session.query(Tests).get(id)
+            return test
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get test: {excpt}')
+        return None
+
+    def get_question(self, id: int) -> Optional[Questions]:
+        """
+        Takes the question instance from the database by the question id
+        :param id: id of the question
+        :return: question instance from the database or none if there is no such question
+        """
+        try:
+            queston = self.session.query(Questions).get(id)
+            return queston
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get question: {excpt}')
+        return None
+
+    def get_qustions_test(self, question_id: int) -> Optional[QuestionsTests]:
+        """
+        Returns instance from the table that links questions and tests
+        :param question_id: id of the question to search appropriate test
+        :return: questions tests instance from the database
+        """
+        try:
+            questions_tests = self.session.query(QuestionsTests).get(question_id)
+            return questions_tests
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get question test link: {excpt}')
+        return None
+
+    # ------------
+    # DELETE
 
     def delete_token(self, id: int) -> Optional[int]:
         """
