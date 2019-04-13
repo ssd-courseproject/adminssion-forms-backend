@@ -22,7 +22,7 @@ class SubmissionsManagement(Resource):
                     application/json:
                         schema:
                             type: array
-                            items: TestsSubmissions
+                            items: TestsSubmissionsSchema
             404:
                 description: Not found
                 content:
@@ -51,7 +51,7 @@ class SubmissionCheckpoint(Resource):
             required: true
             content:
                 application/json:
-                  schema: TestsSubmissions
+                  schema: TestsSubmissionsSchema
         responses:
             201:
                 description: OK
@@ -86,7 +86,7 @@ class SubmissionComplete(Resource):
             required: true
             content:
                 application/json:
-                  schema: TestsSubmissions
+                  schema: TestsSubmissionsSchema
         responses:
             201:
                 description: OK
