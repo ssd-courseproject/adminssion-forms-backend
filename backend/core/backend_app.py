@@ -21,6 +21,8 @@ except ImportError:
 
 
 class FormsBackend(object):
+    orm = None
+
     def __init__(self, flask_app):
         self.app = flask_app
         self.app.config.from_object(Config)
@@ -34,6 +36,9 @@ class FormsBackend(object):
         self.spec = self._init_api_spec()
 
     def init(self):
+        from backend.core.models import ORM
+        self.orm = ORM(self.db)
+
         self._add_routes(self._get_routes())
 
     def _get_routes(self):

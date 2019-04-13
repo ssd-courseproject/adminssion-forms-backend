@@ -6,6 +6,8 @@ from webargs.flaskparser import use_args
 from backend.core.schema import RegistrationSchema
 from backend.helpers import success_response
 
+from server import application
+
 
 class UserRegistration(Resource):
     @use_args(RegistrationSchema)
@@ -32,6 +34,9 @@ class UserRegistration(Resource):
                 example:
                   message: [A user with that email already exists.]
         """
+        user = application.orm.add_user(first_name=args["name"], last_name=args["surname"])
+        auth_info = application.orm.add_candidates_autorization(id=user.id, email=args["email"], password=args["password"])
+
         return jsonify(), 201
 
 

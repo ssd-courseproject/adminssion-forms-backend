@@ -1,4 +1,6 @@
 from typing import Set, List, Optional, Tuple
+
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, Column, Date, Boolean, Text, BigInteger, ForeignKey, ForeignKeyConstraint, \
     UniqueConstraint, Numeric, Enum, ARRAY
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
@@ -222,7 +224,7 @@ class ORM:
     Should automatically handle starting/finishing the session
     """
 
-    def __init__(self):
+    def __init__(self, db: SQLAlchemy):
         self.session = db.session
         # POSTGRES_ADDRESS = self.get_postgres_address('posgres', 'qwerty987', 'admissionDB', 'localhost', 5432)
         # self.engine = create_engine(POSTGRES_ADDRESS, client_encoding='utf8')
