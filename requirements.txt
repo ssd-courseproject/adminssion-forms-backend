@@ -13,5 +13,6 @@ flask-marshmallow
 marshmallow-sqlalchemy
 webargs
 faker
+simplejson
 
 PyYAML
