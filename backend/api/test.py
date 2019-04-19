@@ -1,12 +1,15 @@
-from flask_jwt_extended import jwt_required
 from flask_restful import Resource
-from webargs.flaskparser import use_kwargs
+from flask_restful import Resource
+from marshmallow import fields
+from webargs.flaskparser import use_kwargs, use_args
 
-from backend.core.schema import TestSummarySchema
+from backend.core.schema import TestsRegistrationSchema, TestsSchema, TestsSubmissionsSchema, QuestionsSchema
+from backend.helpers import fail_response, generic_response
+from server import application
 
 
+# +
 class TestsList(Resource):
-    @jwt_required
     def get(self):
         """
         ---
@@ -21,12 +24,18 @@ class TestsList(Resource):
                             type: array
                             items: TestsSchema
         """
-        pass
+        tests = application.orm.get_tests()
+        if tests is None:
+            return fail_response("Some problems with tests retreiving")
+        test_schema = TestsSchema(many=True)
+        res = test_schema.dump(tests)
+        return jsonify(res.data)
 
 
-class TestManagement(Resource):
-    @jwt_required
-    def post(self):
+# +
+class TestCreation(Resource):
+    @use_args(TestsRegistrationSchema, locations=("json",))
+    def post(self, args):
         """
         ---
         summary: Test creation
@@ -35,14 +44,21 @@ class TestManagement(Resource):
           required: true
           content:
             application/json:
-              schema: TestsSchema
+              schema: TestsRegistrationSchema
         responses:
           201:
             description: OK
         """
-        pass
+        test_id = application.orm.add_test(test_name=args['test'].test_name, max_time=args['test'].max_time)
+        for question in args['questions']:
+            application.orm.add_question(question=question.question, question_type=question.question_type,
+                                         answer=question.answer, manually_grading=question.manually_grading,
+                                         points=question.points, test_id=int(test_id))
+        return generic_response(status='Created', msg="Test created", code=201)
 
-    @jwt_required
+
+# +
+class TestManagement(Resource):
     def get(self, test_id):
         """
         ---
@@ -69,11 +85,23 @@ class TestManagement(Resource):
                         example:
                           message: [Test not found]
         """
-        pass
+        test = application.orm.get_test(test_id)
+        test_schema = TestsSchema()
+        if test is None:
+            return fail_response("Test is not found", code=404)
+        res = test_schema.dump(test)
+        questions = []
+        questions_schema = QuestionsSchema()
+        for question_id in res.data['questions_tests']:
+            obj = application.orm.get_question(question_id)
+            questions.append(questions_schema.dump(obj).data)
+        res.data.update({'questions': questions})
+        return jsonify(res.data)
 
-    @jwt_required
-    @use_kwargs(TestSummarySchema)
-    def put(self, test_id):
+    # +
+    @use_kwargs({"test_id": fields.Int(location="query")})
+    @use_args(TestsRegistrationSchema())
+    def put(self, args, test_id):
         """
         ---
         summary: Change test by id
@@ -101,9 +129,20 @@ class TestManagement(Resource):
                           message: [Test not found]
 
         """
-        pass
+        test_id = application.orm.update_test(test_id=args['test'].id, test_name=args['test'].test_name,
+                                              max_time=args['test'].max_time)
+        for question in args['questions']:
+            if question.id is None:
+                application.orm.add_question(question=question.question, question_type=question.question_type,
+                                             answer=question.answer, manually_grading=question.manually_grading,
+                                             points=question.points, test_id=int(test_id))
+            else:
+                application.orm.update_question(question=question.question, question_type=question.question_type,
+                                                answer=question.answer, manually_grading=question.manually_grading,
+                                                points=question.points, test_id=int(test_id), question_id=question.id)
+        return generic_response(status='Success', msg="Test changed", code=201)
 
-    @jwt_required
+#+
     def delete(self, test_id):
         """
         ---
@@ -121,11 +160,13 @@ class TestManagement(Resource):
                           message: [Test not found]
 
         """
-        pass
+        success = application.orm.delete_test(test_id)
+        if success:
+            return generic_response(status='success', code=201, msg="Deleted")
+        return fail_response(msg="Cant delete test")
 
-
+#+
 class TestSubmissions(Resource):
-    @jwt_required
     def get(self, test_id):
         """
         ---
@@ -145,7 +186,7 @@ class TestSubmissions(Resource):
                     application/json:
                         schema:
                             type: array
-                            items: TestsSchema
+                            items: TestsSubmissionsSchema
             404:
                 description: Not found
                 content:
@@ -154,12 +195,18 @@ class TestSubmissions(Resource):
                         example:
                           message: [Test not found]
         """
-        pass
+        submissions = application.orm.get_submissions(test_id)
+        if submissions is None:
+            return fail_response("Some problems with submissions retreiving")
+        test_schema = TestsSubmissionsSchema(many=True)
+        res = test_schema.dump(submissions)
+        return jsonify(res.data)
 
-
+#+
 class TestStart(Resource):
-    @jwt_required
-    def post(self, test_id):
+    @use_kwargs({"test_id": fields.Int(location="query")})
+    @use_args({"test_id": fields.Int(), "candidate_id": fields.Int()}, locations=("json",))
+    def post(self, args, test_id):
         """
         ---
         summary: Test start
@@ -170,8 +217,15 @@ class TestStart(Resource):
               name: test_id
               schema:
                   type: int
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema: TestsSubmissionsSchema
         responses:
             201:
                 description: OK
         """
-        pass
+
+        submission_id = application.orm.init_submission(candidate_id=args['candidate_id'], test_id=args['test_id'])
+        return generic_response(status='Created', msg=submission_id, code=201)

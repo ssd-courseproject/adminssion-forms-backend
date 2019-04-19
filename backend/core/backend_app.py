@@ -1,15 +1,15 @@
 from collections import OrderedDict
 
 import yaml
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec_webframeworks.flask import FlaskPlugin
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
-from apispec import APISpec
-from apispec.ext.marshmallow import MarshmallowPlugin
-from apispec_webframeworks.flask import FlaskPlugin
 
 from backend.config.main import OPENAPI_META
 from backend.core.errors import error_descriptions
@@ -61,6 +61,7 @@ class FormsBackend(object):
                     'submissions': test.TestSubmissions,
                 },
                 'list': test.TestsList,
+                'create': test.TestCreation,
             },
             'submissions': {
                 '<int:submission_id>': {

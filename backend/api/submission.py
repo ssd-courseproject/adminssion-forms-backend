@@ -1,9 +1,15 @@
-from flask_jwt_extended import jwt_required
+from flask import jsonify
 from flask_restful import Resource
+from marshmallow import fields
+from webargs.flaskparser import use_kwargs, use_args
+
+from backend.core.schema import TestsSubmissionsSchema, TestsSubmissionWithAnswersSchema, CandidatesAnswersSchema
+from backend.helpers import success_response, fail_response, generic_response
+from server import application
 
 
+# +
 class SubmissionsManagement(Resource):
-    @jwt_required
     def get(self, submission_id):
         """
         ---
@@ -31,12 +37,24 @@ class SubmissionsManagement(Resource):
                         example:
                           message: [Test not found]
         """
-        pass
+        submission = application.orm.get_submission(submission_id)
+        submission_schema = TestsSubmissionsSchema()
+        if submission is None:
+            return fail_response("Test is not found", code=404)
+        res = submission_schema.dump(submission)
+        answers = application.orm.get_answers(res.data['id'])
+        json_answers = []
+        answers_schema = CandidatesAnswersSchema()
+        for answer in answers:
+            json_answers.append(answers_schema.dump(answer).data)
+        res.data.update({'answers': json_answers})
+        return jsonify(res.data)
 
 
 class SubmissionCheckpoint(Resource):
-    @jwt_required
-    def put(self, submission_id):
+    @use_kwargs({"submissions_id": fields.Int(location="query")})
+    @use_args(TestsSubmissionWithAnswersSchema(), locations=("json",))
+    def put(self, args, submission_id):
         """
         ---
         summary: Test checkpoint
@@ -64,11 +82,17 @@ class SubmissionCheckpoint(Resource):
                           message: [Test not found]
 
         """
-        pass
+        for answer in args['answers']:
+            res = application.orm.add_answer(submission_id=submission_id, question_id=answer.question_id,
+                                             answer=answer.answer)
+            if res is None:
+                application.orm.update_answer(submission_id=submission_id, question_id=answer.question_id,
+                                              answer=answer.answer, grade=answer.grade, comments=answer.comments)
+        return success_response(msg="Answers saved")
 
 
 class SubmissionComplete(Resource):
-    @jwt_required
+    @use_kwargs({"submissions_id": fields.Int(location="query")})
     def post(self, submission_id):
         """
         ---
@@ -99,4 +123,5 @@ class SubmissionComplete(Resource):
                           message: [Test not found]
 
         """
-        pass
+        test_id = application.orm.finish_submission(submission_id=submission_id)
+        return generic_response(status='Created', msg="Submission completed", code=201)

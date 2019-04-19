@@ -1,10 +1,10 @@
-from typing import Set, List, Optional, Tuple
+from datetime import date, datetime
+from typing import List, Optional
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import create_engine, Column, Date, Boolean, Text, BigInteger, ForeignKey, ForeignKeyConstraint, \
-    UniqueConstraint, Numeric, Enum, ARRAY
+from sqlalchemy import Column, Date, Boolean, Text, BigInteger, ForeignKey, Numeric, ARRAY, Integer
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
-from datetime import date, datetime
+
 from server import application
 
 db = application.db
@@ -147,11 +147,12 @@ class TestsSubmissions(db.Model):
     candidate_id = Column(BigInteger, ForeignKey(Users.id))
     time_start = Column(Date, default=datetime.utcnow)
     time_end = Column(Date)
+    test_id = Column(Integer)
     submitted = Column(Boolean)
     graded_by = (BigInteger, ForeignKey(Users.id))
 
     answers = relationship('CandidatesAnswers', cascade="all,delete", backref='questions_tests',
-                           uselist=False)
+                           uselist=True)
 
 
 class Questions(db.Model):
@@ -189,6 +190,7 @@ class CandidatesAnswers(db.Model):
     comments = Column(Text)
 
 
+
 class Tests(db.Model):
     """
     All actual and archived tests in the system
@@ -202,7 +204,7 @@ class Tests(db.Model):
     archived = Column(Boolean)
 
     questions_tests = relationship('QuestionsTests', cascade="all,delete", backref='tests',
-                                   uselist=False)  # one-to-one
+                                   uselist=True)  # one-to-one
     # questions = relationship('Questions', cascade="all,delete", backref='questions_tests', # todo: is required?
     # uselist=False)  # one-to-one
 
@@ -369,6 +371,33 @@ class ORM:
         return None
 
     # tests adding
+    def update_question(self, question: str, question_type: int, answer: [str], manually_grading: bool, points: float,
+                        test_id: int, question_id: int) -> Optional[int]:
+        """
+        Adds new question to the questions table. Also adds pair question_id, test_id to the question_tests linking
+        table.
+        :param question: the text of the question including answers to choose
+        :param question_type: type of question that maps to single choice, multiple choice and open question
+        :param answer: the right answer to this question. If it is open question this field will be empty
+        :param manually_grading: true for open questions
+        :param points: points that can be earn for this question
+        :param test_id: id of the test that includes this question
+        :return:
+        """
+        try:
+
+            new_question = self.session.query(Questions) \
+                .filter(Questions.id == question_id) \
+                .update({'question': question, 'question_type': question_type, 'answer': answer,
+                         'manually_grading': manually_grading,
+                         'points': points, 'test_id': test_id, })
+            self.session.flush()
+            return new_question.id
+        except Exception as excpt:
+            self.session.rollback()
+        print('Couldn\'t add question:')
+        return None
+
     def add_question(self, question: str, question_type: int, answer: [str], manually_grading: bool, points: float,
                      test_id: int) -> Optional[int]:
         """
@@ -385,18 +414,55 @@ class ORM:
         try:
             new_question = Questions(question=question, question_type=question_type, answer=answer,
                                      manually_grading=manually_grading, points=points)
-            new_questions_tests = QuestionsTests(question_id=new_question.id, test_id=test_id)
             self.session.add(new_question)
+            self.session.commit()
+            new_questions_tests = QuestionsTests(question_id=new_question.id, test_id=test_id)
             self.session.add(new_questions_tests)
             self.session.commit()
             return new_question.id
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t add question: {excpt}')
+        print('Couldn\'t add question:')
         return None
 
-    def add_test(self, test_name: str, max_time: int, archived: bool = False) -> Optional[int]:
+    def add_answer(self, submission_id: int, question_id: int, answer: str) -> Optional[int]:
+        try:
+            new_answer = CandidatesAnswers(submission_id=submission_id, question_id=question_id, answer=answer)
+            self.session.add(new_answer)
+            self.session.commit()
+            return new_answer.id
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t add test:')
+        return None
 
+    def get_answers(self, submission_id) -> Optional[List[CandidatesAnswers]]:
+        try:
+            return self.session.query(CandidatesAnswers) \
+                .filter(CandidatesAnswers.submission_id == submission_id).all()
+
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get tests: {excpt}')
+        return None
+
+    def update_answer(self, submission_id: int, question_id: int, answer: str, grade: int, comments: str) -> Optional[
+        int]:
+        try:
+            self.session.query(CandidatesAnswers) \
+                .filter(CandidatesAnswers.submission_id == submission_id).filter(
+                CandidatesAnswers.question_id == question_id) \
+                .update({'answer': answer, 'grade': grade, 'comments': comments})
+            self.session.flush()
+            self.session.commit()
+            return submission_id
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t change test: {excpt}')
+        return None
+
+
+    def add_test(self, test_name: str, max_time: int, archived: bool = False) -> Optional[int]:
         try:
             new_test = Tests(test_name=test_name, max_time=max_time, archived=archived)
             self.session.add(new_test)
@@ -407,8 +473,74 @@ class ORM:
         print(f'Couldn\'t add test: {excpt}')
         return None
 
+    def init_submission(self, candidate_id: BigInteger, test_id: BigInteger):
+        try:
+            new_submission = TestsSubmissions(candidate_id=candidate_id,
+                                              time_start=datetime.utcnow(), submitted=False,
+                                              test_id=BigInteger._to_instance(test_id))
+
+            self.session.add(new_submission)
+            self.session.commit()
+            return new_submission.id
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add test: ')
+        return None
+
+    def update_submission(self, sub_id: int, submitted: bool, graded_by: int) -> Optional[int]:
+        try:
+            self.session.query(TestsSubmissions) \
+                .filter(TestsSubmissions.id == sub_id) \
+                .update({'submitted': submitted, 'graded_by': graded_by[0]})
+            self.session.flush()
+            self.session.commit()
+            return sub_id
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t change test: ')
+        return None
+
+    def finish_submission(self, submission_id: int):
+        try:
+            self.session.query(TestsSubmissions) \
+                .filter(TestsSubmissions.id == submission_id) \
+                .update({'time_end': datetime.utcnow(), 'submitted': True})
+            self.session.flush()
+            self.session.commit()
+            return submission_id
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t add test: {excpt}')
+        return None
+
     # ------------
-    # GET
+    # PUT
+    def update_test(self, test_id: int, test_name: str, max_time: int, archived: bool = False) -> Optional[int]:
+        try:
+            self.session.query(Tests) \
+                .filter(Tests.id == test_id) \
+                .update({'test_name': test_name, 'max_time': max_time, 'archived': archived})
+            self.session.flush()
+            self.session.commit()
+            return test_id
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t change test: {excpt}')
+        return None
+
+    def delete_test(self, test_id) -> Optional[bool]:
+        try:
+            existing_test = self.session.query(Tests).filter(Tests.id == test_id).first()
+            if existing_test:
+                self.session.delete(existing_test)
+                self.session.commit()
+                return True
+            else:
+                return False
+        except Exception as excpt:
+            self.session.rollback()
+        print(f'Couldn\'t delete test:')
+        return None
 
     def get_user(self, id: int) -> Optional[Users]:
         """
@@ -695,6 +827,45 @@ class ORM:
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get test: {excpt}')
+        return None
+
+    def get_tests(self) -> Optional[List[Tests]]:
+        """
+        Takes all tests instances from the database
+        :return: all test instances from the database.
+        """
+        try:
+            tests = self.session.query(Tests).filter(Tests.archived == 'false').all()
+            return tests
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get tests: {excpt}')
+        return None
+
+    def get_submissions(self, test_id) -> Optional[List[TestsSubmissions]]:
+        """
+        Takes all tests instances from the database
+        :return: all test instances from the database.
+        """
+        try:
+            submissions = self.session.query(TestsSubmissions).filter(TestsSubmissions.test_id == test_id).all()
+            return submissions
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get tests: {excpt}')
+        return None
+
+    def get_submission(self, sub_id) -> Optional[List[TestsSubmissions]]:
+        """
+        Takes all tests instances from the database
+        :return: all test instances from the database.
+        """
+        try:
+            submission = self.session.query(TestsSubmissions).get(sub_id)
+            return submission
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get tests: {excpt}')
         return None
 
     def get_question(self, id: int) -> Optional[Questions]:
