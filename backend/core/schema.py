@@ -47,10 +47,15 @@ class CandidatesAnswersSchema(ModelSchema):
     class Meta:
         model = CandidatesAnswers
 
+    question_id = field_for(CandidatesAnswers, 'question_id', dump_only=False)
+    submission_id = field_for(CandidatesAnswers, 'submission_id', dump_only=False)
+
+
 
 class TestsSubmissionsSchema(ModelSchema):
     class Meta:
         model = TestsSubmissions
+        strict = True
 
 
 class QuestionsTestsSchema(ModelSchema):
@@ -66,6 +71,17 @@ class TestsSchema(ModelSchema):
 class QuestionsSchema(ModelSchema):
     class Meta:
         model = Questions
+
+
+class TestsRegistrationSchema(Schema):
+    test = fields.Nested(TestsSchema)
+    questions = fields.List(fields.Nested(QuestionsSchema))
+
+
+class TestsSubmissionWithAnswersSchema(Schema):
+    submission = fields.Nested(TestsSubmissionsSchema)
+    answers = fields.List(fields.Nested(CandidatesAnswersSchema))
+
 
 
 ######
