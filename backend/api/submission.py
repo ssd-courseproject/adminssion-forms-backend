@@ -8,7 +8,6 @@ from backend.helpers import success_response, fail_response, generic_response
 from server import application
 
 
-# +
 class SubmissionsManagement(Resource):
     def get(self, submission_id):
         """

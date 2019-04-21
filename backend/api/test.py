@@ -8,7 +8,6 @@ from backend.helpers import fail_response, generic_response
 from server import application
 
 
-# +
 class TestsList(Resource):
     def get(self):
         """
@@ -32,7 +31,6 @@ class TestsList(Resource):
         return jsonify(res.data)
 
 
-# +
 class TestCreation(Resource):
     @use_args(TestsRegistrationSchema, locations=("json",))
     def post(self, args):
@@ -57,7 +55,6 @@ class TestCreation(Resource):
         return generic_response(status='Created', msg="Test created", code=201)
 
 
-# +
 class TestManagement(Resource):
     def get(self, test_id):
         """
@@ -98,7 +95,6 @@ class TestManagement(Resource):
         res.data.update({'questions': questions})
         return jsonify(res.data)
 
-    # +
     @use_kwargs({"test_id": fields.Int(location="query")})
     @use_args(TestsRegistrationSchema())
     def put(self, args, test_id):
@@ -142,7 +138,6 @@ class TestManagement(Resource):
                                                 points=question.points, test_id=int(test_id), question_id=question.id)
         return generic_response(status='Success', msg="Test changed", code=201)
 
-    # +
     def delete(self, test_id):
         """
         ---
@@ -166,7 +161,6 @@ class TestManagement(Resource):
         return fail_response(msg="Cant delete test")
 
 
-# +
 class TestSubmissions(Resource):
     def get(self, test_id):
         """
@@ -204,7 +198,6 @@ class TestSubmissions(Resource):
         return jsonify(res.data)
 
 
-# +
 class TestStart(Resource):
     @use_kwargs({"test_id": fields.Int(location="query")})
     @use_args({"test_id": fields.Int(), "candidate_id": fields.Int()}, locations=("json",))
