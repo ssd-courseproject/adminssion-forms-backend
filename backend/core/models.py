@@ -136,6 +136,24 @@ class CandidatesStatus(db.Model):
     admission_date = Column(Date)
 
 
+class Tests(db.Model):
+    """
+    All actual and archived tests in the system
+    """
+    __tablename__ = 'tests'
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(BigInteger, primary_key=True)
+    test_name = Column(Text)
+    max_time = Column(Date)
+    archived = Column(Boolean)
+
+    questions_tests = relationship('QuestionsTests', cascade="all,delete", backref='tests',
+                                   uselist=True)  # one-to-one
+    # questions = relationship('Questions', cascade="all,delete", backref='questions_tests', # todo: is required?
+    # uselist=False)  # one-to-one
+
+
 class TestsSubmissions(db.Model):
     """
     Keeps data about tests that were submitted or started by a candidate
@@ -145,9 +163,9 @@ class TestsSubmissions(db.Model):
 
     id = Column(BigInteger, primary_key=True)
     candidate_id = Column(BigInteger, ForeignKey(Users.id))
+    test_id = Column(Integer, ForeignKey(Tests.id))
     time_start = Column(Date, default=datetime.utcnow)
     time_end = Column(Date)
-    test_id = Column(Integer)
     submitted = Column(Boolean)
     graded_by = (BigInteger, ForeignKey(Users.id))
 
@@ -188,25 +206,6 @@ class CandidatesAnswers(db.Model):
     answer = Column(ARRAY(Text))
     grade = Column(Numeric)
     comments = Column(Text)
-
-
-
-class Tests(db.Model):
-    """
-    All actual and archived tests in the system
-    """
-    __tablename__ = 'tests'
-    __table_args__ = {'extend_existing': True}
-
-    id = Column(BigInteger, primary_key=True)
-    test_name = Column(Text)
-    max_time = Column(Date)
-    archived = Column(Boolean)
-
-    questions_tests = relationship('QuestionsTests', cascade="all,delete", backref='tests',
-                                   uselist=True)  # one-to-one
-    # questions = relationship('Questions', cascade="all,delete", backref='questions_tests', # todo: is required?
-    # uselist=False)  # one-to-one
 
 
 class QuestionsTests(db.Model):
@@ -460,7 +459,6 @@ class ORM:
             self.session.rollback()
         print(f'Couldn\'t change test: {excpt}')
         return None
-
 
     def add_test(self, test_name: str, max_time: int, archived: bool = False) -> Optional[int]:
         try:
@@ -936,7 +934,7 @@ class ORM:
 
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t delete candidate: {excpt}')
+        print(f'Couldn\'t delete candidate: {test_id}')
         return None
 
     def delete_candidates_documents(self, id: int) -> Optional[int]:

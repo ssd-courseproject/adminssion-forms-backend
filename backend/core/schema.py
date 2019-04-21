@@ -51,7 +51,6 @@ class CandidatesAnswersSchema(ModelSchema):
     submission_id = field_for(CandidatesAnswers, 'submission_id', dump_only=False)
 
 
-
 class TestsSubmissionsSchema(ModelSchema):
     class Meta:
         model = TestsSubmissions
@@ -81,7 +80,6 @@ class TestsRegistrationSchema(Schema):
 class TestsSubmissionWithAnswersSchema(Schema):
     submission = fields.Nested(TestsSubmissionsSchema)
     answers = fields.List(fields.Nested(CandidatesAnswersSchema))
-
 
 
 ######

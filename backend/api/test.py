@@ -1,4 +1,4 @@
-from flask_restful import Resource
+from flask.json import jsonify
 from flask_restful import Resource
 from marshmallow import fields
 from webargs.flaskparser import use_kwargs, use_args
@@ -142,7 +142,7 @@ class TestManagement(Resource):
                                                 points=question.points, test_id=int(test_id), question_id=question.id)
         return generic_response(status='Success', msg="Test changed", code=201)
 
-#+
+    # +
     def delete(self, test_id):
         """
         ---
@@ -165,7 +165,8 @@ class TestManagement(Resource):
             return generic_response(status='success', code=201, msg="Deleted")
         return fail_response(msg="Cant delete test")
 
-#+
+
+# +
 class TestSubmissions(Resource):
     def get(self, test_id):
         """
@@ -202,7 +203,8 @@ class TestSubmissions(Resource):
         res = test_schema.dump(submissions)
         return jsonify(res.data)
 
-#+
+
+# +
 class TestStart(Resource):
     @use_kwargs({"test_id": fields.Int(location="query")})
     @use_args({"test_id": fields.Int(), "candidate_id": fields.Int()}, locations=("json",))
