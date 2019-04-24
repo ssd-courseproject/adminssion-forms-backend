@@ -16,7 +16,7 @@ def fail_response(msg=None, code=None, **kwargs):
     return generic_response(status='fail', msg=msg, code=code, **kwargs)
 
 
-def generic_response(status, msg, code=None, **kwargs):
+def generic_response(status, msg=None, code=None, **kwargs):
     data = {'status': status, 'data': kwargs}
     if msg is not None:
         data['message'] = [msg]

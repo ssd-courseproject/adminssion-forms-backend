@@ -28,6 +28,7 @@ class TestsList(Resource):
             return fail_response("Some problems with tests retreiving")
         test_schema = TestsSchema(many=True)
         res = test_schema.dump(tests)
+
         return jsonify(res.data)
 
 

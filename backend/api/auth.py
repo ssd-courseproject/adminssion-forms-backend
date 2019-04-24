@@ -47,7 +47,7 @@ class UserLogin(Resource):
         ORM = application.orm
 
         user_auth = ORM.get_user_auth_by_email(email=email)
-        if user_auth:
+        if not user_auth:
             return fail_response('Bad email or password', code=406)
 
         if not argon2.verify(password, user_auth.password):

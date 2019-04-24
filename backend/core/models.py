@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Date, Boolean, Text, BigInteger, ForeignKey, Numeric, ARRAY, Integer
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
 
-from backend.core.enums import UsersRole, CandidateStatus
+from backend.core.enums import UsersRole, CandidateStatus, TokenType
 from server import application
 
 db = application.db
@@ -228,50 +228,49 @@ class ORM:
 
     def __init__(self, db: SQLAlchemy):
         self.session = db.session
-        # POSTGRES_ADDRESS = self.get_postgres_address('posgres', 'qwerty987', 'admissionDB', 'localhost', 5432)
-        # self.engine = create_engine(POSTGRES_ADDRESS, client_encoding='utf8')
-        # self.session = self._get_session()
 
     # ------------
     # SESSION
-    def get_postgres_address(user, password, db, host='localhost', port=5432):
-        """Returns a url to connect with PostgreSQL"""
-
-        # We connect with the help of the PostgreSQL URL
-        url = 'postgresql://{}:{}@{}:{}/{}'
-        url = url.format(user, password, host, port, db)
-        return url
-
-    def _get_session(self) -> Optional[Session]:
-        """Connects to database, and returns Session"""
-        try:
-            # self.engine = create_engine(POSTGRES_ADDRESS)
-            Session = scoped_session(sessionmaker(bind=self.engine))
-            self.session = Session()
-            return self.session
-        except Exception as excpt:
-            print(f'Can\'t connect to the database: {excpt}')
-
-    def open_session(self):
-        """Opens session"""
-        if not self.session:
-            self.session = self._get_session()
-        else:
-            print(f'Session for {self.engine} is already open')
-
-    def close_session(self):
-        """Closes session"""
-        self.session.commit()
-        self.session.close()
-        self.session = None
+    # def get_postgres_address(user, password, db, host='localhost', port=5432):
+    #     """Returns a url to connect with PostgreSQL"""
+    #
+    #     # We connect with the help of the PostgreSQL URL
+    #     url = 'postgresql://{}:{}@{}:{}/{}'
+    #     url = url.format(user, password, host, port, db)
+    #     return url
+    #
+    # def _get_session(self) -> Optional[Session]:
+    #     """Connects to database, and returns Session"""
+    #     try:
+    #         Session = scoped_session(sessionmaker(bind=self.engine))
+    #         self.session = Session()
+    #         return self.session
+    #     except Exception as excpt:
+    #         print(f'Can\'t connect to the database: {excpt}')
+    #
+    # def open_session(self):
+    #     """Opens session"""
+    #     if not self.session:
+    #         self.session = self._get_session()
+    #     else:
+    #         print(f'Session for {self.engine} is already open')
+    #
+    # def close_session(self):
+    #     """Closes session"""
+    #     self.session.commit()
+    #     self.session.close()
+    #     self.session = None
 
     # ------------
     # ADD
-    def add_user(self, first_name: str = None, last_name: str = None, role: int = UsersRole.CANDIDATE) -> Optional[
-        Users]:
+    def add_user(self, first_name: str = None, last_name: str = None,
+                 role: int = UsersRole.CANDIDATE) -> Optional[Users]:
         """
         Adds new candidate to the database
         """
+        if isinstance(role, UsersRole):
+            role = role.value
+
         try:
             new_candidate = Users(first_name=first_name, last_name=last_name, role=role)
             self.session.add(new_candidate)
@@ -284,21 +283,27 @@ class ORM:
 
         return None
 
-    def add_token(self, jti, date, expires, token_type, user_id, revoked=False) -> Optional[int]:
+    def add_token(self, jti: str, token_type: str, user_id: int, created: Date = datetime.utcnow(),
+                  expires: Date = None, revoked: bool = False) -> Optional[int]:
+        if isinstance(token_type, TokenType):
+            token_type = token_type.value
+
         try:
-            new_token = RevokedToken(jti=jti, date=date, expires=expires, token_type=token_type,
+            new_token = RevokedToken(jti=jti, date=created, expires=expires, token_type=token_type,
                                      user_id=user_id, revoked=revoked)
             self.session.add(new_token)
             self.session.commit()
+
             return new_token
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t add new token: {excpt}')
+
         return None
 
-    def add_candidates_info(self, candidate_id: int, nationaity: str = None, gender: bool = False,
-                            date_of_birth: Date = None,
-                            subscription_email: str = None, skype: str = None, phone: str = None) -> Optional[int]:
+    def add_candidates_info(self, candidate_id: int, nationaity: str = None,
+                            gender: bool = False, date_of_birth: Date = None, subscription_email: str = None,
+                            skype: str = None, phone: str = None) -> Optional[CandidatesInfo]:
         """
         Adds all necessary candidate's info
         :param candidate_id: id of the given candidate
@@ -316,15 +321,29 @@ class ORM:
                                              subscription_email=subscription_email, skype=skype, phone=phone)
             self.session.add(candidates_info)
             self.session.commit()
-            return candidates_info.id
+
+            return candidates_info
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t add candidates info: {excpt}')
+
         return None
 
-    def add_candidates_status(self, candidate_id: int, status: int = CandidateStatus.PENDING, gender: bool = None,
-                              admission_date: str = None):
-        pass
+    def add_candidates_status(self, candidate_id: int,
+                              status: int = CandidateStatus.PENDING,
+                              admission_date: Date = None) -> Optional[CandidatesStatus]:
+        try:
+            candidates_status = CandidatesStatus(candidate_id=candidate_id, status=status,
+                                                 admission_date=admission_date)
+            self.session.add(candidates_status)
+            self.session.commit()
+
+            return candidates_status
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add candidates status: {excpt}')
+
+        return None
 
     def add_candidates_autorization(self, email: str, id: int, password: str) -> Optional[int]:
         """
@@ -345,12 +364,13 @@ class ORM:
                 return existing_candidates_autorization
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t add candidates autorization: {excpt}')
+            print(f'Couldn\'t add candidates autorization: {excpt}')
         return None
 
-    def add_candidates_documents(self, id: int, cv: str = None, letter_of_recommendation: str = None,
-                                 motivation_letter: str = None, passport: str = None, photo: str = None,
-                                 project_description: str = None, transcript: str = None) -> Optional[int]:
+    def add_candidates_documents(self, id: int, cv: str = None,
+                                 letter_of_recommendation: str = None, motivation_letter: str = None,
+                                 passport: str = None, photo: str = None, project_description: str = None,
+                                 transcript: str = None) -> Optional[CandidatesDocuments]:
         """
         Add all necessary candidates documents (links to the files)
         :param id: candidate's id
@@ -371,14 +391,17 @@ class ORM:
                                                        transcript=transcript)
             self.session.add(candidates_documents)
             self.session.commit()
-            return candidates_documents.id
+
+            return candidates_documents
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t add candidates documents: {excpt}')
+            print(f'Couldn\'t add candidates documents: {excpt}')
+
         return None
 
     # tests adding
-    def update_question(self, question: str, question_type: int, answer: [str], manually_grading: bool, points: float,
+    def update_question(self, question: str, question_type: int, answer: [str],
+                        manually_grading: bool, points: float,
                         test_id: int, question_id: int) -> Optional[int]:
         """
         Adds new question to the questions table. Also adds pair question_id, test_id to the question_tests linking
@@ -402,7 +425,7 @@ class ORM:
             return new_question.id
         except Exception as excpt:
             self.session.rollback()
-        print('Couldn\'t add question:')
+            print(f'Couldn\'t add question: {excpt}')
         return None
 
     def add_question(self, question: str, question_type: int, answer: [str], manually_grading: bool, points: float,
@@ -429,7 +452,7 @@ class ORM:
             return new_question.id
         except Exception as excpt:
             self.session.rollback()
-        print('Couldn\'t add question:')
+            print(f'Couldn\'t add question: {excpt}')
         return None
 
     def add_answer(self, submission_id: int, question_id: int, answer: str) -> Optional[int]:
@@ -440,7 +463,7 @@ class ORM:
             return new_answer.id
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t add test:')
+            print(f'Couldn\'t add test: {excpt}')
         return None
 
     def get_answers(self, submission_id) -> Optional[List[CandidatesAnswers]]:
@@ -451,10 +474,11 @@ class ORM:
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get tests: {excpt}')
+
         return None
 
-    def update_answer(self, submission_id: int, question_id: int, answer: str, grade: int, comments: str) -> Optional[
-        int]:
+    def update_answer(self, submission_id: int, question_id: int,
+                      answer: str, grade: int, comments: str) -> Optional[int]:
         try:
             self.session.query(CandidatesAnswers) \
                 .filter(CandidatesAnswers.submission_id == submission_id).filter(
@@ -465,7 +489,7 @@ class ORM:
             return submission_id
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t change test: {excpt}')
+            print(f'Couldn\'t change test: {excpt}')
         return None
 
     def add_test(self, test_name: str, max_time: int, archived: bool = False) -> Optional[int]:
@@ -476,7 +500,7 @@ class ORM:
             return new_test.id
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t add test: {excpt}')
+            print(f'Couldn\'t add test: {excpt}')
         return None
 
     def init_submission(self, candidate_id: BigInteger, test_id: BigInteger):
@@ -490,20 +514,20 @@ class ORM:
             return new_submission.id
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t add test: ')
+            print(f'Couldn\'t add test: {excpt}')
         return None
 
     def update_submission(self, sub_id: int, submitted: bool, graded_by: int) -> Optional[int]:
         try:
             self.session.query(TestsSubmissions) \
                 .filter(TestsSubmissions.id == sub_id) \
-                .update({'submitted': submitted, 'graded_by': graded_by[0]})
+                .update({'submitted': submitted, 'graded_by': graded_by})
             self.session.flush()
             self.session.commit()
             return sub_id
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t change test: ')
+            print(f'Couldn\'t change test: {excpt}')
         return None
 
     def finish_submission(self, submission_id: int):
@@ -516,7 +540,8 @@ class ORM:
             return submission_id
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t add test: {excpt}')
+            print(f'Couldn\'t add test: {excpt}')
+
         return None
 
     # ------------
@@ -528,10 +553,12 @@ class ORM:
                 .update({'test_name': test_name, 'max_time': max_time, 'archived': archived})
             self.session.flush()
             self.session.commit()
+
             return test_id
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t change test: {excpt}')
+            print(f'Could not change test: {excpt}')
+
         return None
 
     def delete_test(self, test_id) -> Optional[bool]:
@@ -545,21 +572,23 @@ class ORM:
                 return False
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t delete test:')
+            print(f'Couldn\'t delete test: {excpt}')
+
         return None
 
-    def get_user(self, id: int) -> Optional[Users]:
+    def get_user(self, u_id: int) -> Optional[Users]:
         """
         Get user's instance by given id
-        :param id: id of the user
+        :param u_id: id of the user
         :return: user's instances or None if there is no such candidate
         """
         try:
-            user = self.session.query(Users).get(id)
+            user = self.session.query(Users).get(u_id)
+
             return user
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get user: {excpt}')
+            print(f'Could not get user: {excpt}')
 
         return None
 
@@ -569,7 +598,7 @@ class ORM:
         :return: user auth instance or None if there is no such candidate
         """
         try:
-            user_auth = self.session.query(UsersAutorization).filter({UsersAutorization.email: email}).one()
+            user_auth = self.session.query(UsersAutorization).filter(UsersAutorization.email == email).first()
 
             return user_auth
         except Exception as excpt:
@@ -578,32 +607,32 @@ class ORM:
 
         return None
 
-    def get_token(self, id) -> Optional[RevokedToken]:
+    def get_token(self, t_id) -> Optional[RevokedToken]:
         """
         Get token's instance by given id
-        :param id: id of the token
+        :param t_id: id of the token
         :return: token's instances or None if there is no such token
         """
         try:
-            token = self.session.query(RevokedToken).get(id)
+            token = self.session.query(RevokedToken).get(t_id)
             return token
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get token: {excpt}')
         return None
 
-    def get_test(self, id: int) -> Optional[Tests]:
+    def get_test(self, t_id: int) -> Optional[Tests]:
         """
         Takes test instance from the database by test id
-        :param id: id of the test
+        :param t_id: id of the test
         :return: test instance from the database. Or None if test was not found
         """
         try:
-            test = self.session.query(Tests).get(id)
+            test = self.session.query(Tests).get(t_id)
             return test
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get test: {excpt}')
+            print(f'Could not get test: {excpt}')
         return None
 
     def get_tests(self) -> Optional[List[Tests]]:
@@ -645,18 +674,20 @@ class ORM:
             print(f'Couldn\'t get tests: {excpt}')
         return None
 
-    def get_question(self, id: int) -> Optional[Questions]:
+    def get_question(self, q_id: int) -> Optional[Questions]:
         """
         Takes the question instance from the database by the question id
-        :param id: id of the question
+        :param q_id: id of the question
         :return: question instance from the database or none if there is no such question
         """
         try:
-            queston = self.session.query(Questions).get(id)
+            queston = self.session.query(Questions).get(q_id)
+
             return queston
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get question: {excpt}')
+            print(f'Could not get question: {excpt}')
+
         return None
 
     def get_qustions_test(self, question_id: int) -> Optional[QuestionsTests]:

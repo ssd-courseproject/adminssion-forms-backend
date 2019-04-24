@@ -8,12 +8,16 @@ error_descriptions = {
         'status': 410,
     },
     'ExpiredSignatureError': {
-        'message': ["Your token is expired"],
+        'message': ["Your token is expired."],
         'status': 419,
     },
     'NoAuthorizationError': {
-        'message': ["Authorization token not provided"],
+        'message': ["Authorization token not provided."],
         'status': 401,
+    },
+    'MethodNotAllowed': {
+        'message': ["The method is not allowed for the requested URL."],
+        'status': 405,
     }
 }
 

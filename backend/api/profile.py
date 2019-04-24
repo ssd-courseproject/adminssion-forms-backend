@@ -3,9 +3,10 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restful import Resource
 from webargs.flaskparser import use_args
 from passlib.hash import argon2
+from validate_email import validate_email
 
 from backend.core.schema import RegistrationSchema
-from backend.helpers import success_response, fail_response
+from backend.helpers import success_response, fail_response, generic_response
 
 from server import application
 
@@ -27,6 +28,13 @@ class UserRegistration(Resource):
         responses:
           201:
             description: OK
+          406:
+            description: Invalid data provided
+            content:
+              application/json:
+                schema: ErrorSchema
+                example:
+                  message: [Invalid email]
           409:
             description: User already exists
             content:
@@ -36,6 +44,10 @@ class UserRegistration(Resource):
                   message: [A user with that email already exists.]
         """
         ORM = application.orm
+
+        # if not validate_email(args["email"], check_mx=True, verify=True):
+        if not validate_email(args["email"]):
+            return fail_response('Invalid email', code=406)
 
         existing_user = ORM.get_user_auth_by_email(email=args["email"])
         if existing_user:
@@ -47,7 +59,7 @@ class UserRegistration(Resource):
         ORM.add_candidates_documents(id=user.id)
         ORM.add_candidates_info(candidate_id=user.id)
 
-        return jsonify(), 201
+        return generic_response(201)
 
 
 class UserProfile(Resource):
