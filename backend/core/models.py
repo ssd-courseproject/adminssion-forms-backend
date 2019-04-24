@@ -476,6 +476,18 @@ class ORM:
 
         return None
 
+    def is_answer_exists(self, submission_id, question_id) -> Optional[bool]:
+        try:
+            answer = self.session.query(CandidatesAnswers) \
+                .filter(CandidatesAnswers.submission_id == submission_id) \
+                .filter(CandidatesAnswers.question_id == question_id).one()
+            if answer is not None:
+                return True
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get tests: {excpt}')
+
+        return False
     def update_answer(self, submission_id: int, question_id: int,
                       answer: str, grade: int, comments: str) -> Optional[int]:
         try:

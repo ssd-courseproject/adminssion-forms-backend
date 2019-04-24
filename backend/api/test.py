@@ -5,6 +5,7 @@ from marshmallow import fields
 from webargs.flaskparser import use_kwargs, use_args
 
 from backend.core.decorators import candidate_role_required
+from backend.core import enums
 from backend.core.models import Users
 from backend.core.schema import TestsRegistrationSchema, TestsSchema, TestsSubmissionsSchema, QuestionsSchema
 from backend.helpers import fail_response, generic_response, success_response
@@ -12,6 +13,7 @@ from server import application
 
 
 class TestsList(Resource):
+    @jwt_required
     def get(self):
         """
         ---
@@ -26,27 +28,37 @@ class TestsList(Resource):
                             type: array
                             items: TestsSchema
                             example: [
-                                            {
-                                                "archived": false,
-                                                "id": 4,
-                                                "max_time": null,
-                                                "questions_tests": [],
-                                                "test_name": "4"
-                                            },    {
-                                                "archived": false,
-                                                "id": 5,
-                                                "max_time": null,
-                                                "questions_tests": [],
-                                                "test_name": "4"
-                                            }]
+                                {
+                                    "archived": false,
+                                    "id": 4,
+                                    "max_time": null,
+                                    "questions_tests": [],
+                                    "test_name": "4"
+                                }, {
+                                    "archived": false,
+                                    "id": 5,
+                                    "max_time": null,
+                                    "questions_tests": [],
+                                    "test_name": "4"
+                                }
+                            ]
+            406:
+                description: Forbidden
+                content:
+                  application/json:
+                    schema: ErrorSchema
+                    example:
+                      message: [You are not allowed to create test]
             404:
                 description: Tests not found
                 content:
                       application/json:
                         schema: ErrorSchema
 
-
         """
+        user: Users = get_current_user()
+        if user.role == enums.UsersRole.MANAGER or user.role == enums.UsersRole.STAFF:
+            return fail_response(msg="You are not allowed to create test", code=406)
         tests = application.orm.get_tests()
         if tests is None:
             return fail_response("Some problems with tests retrieving", code=404)
@@ -57,6 +69,7 @@ class TestsList(Resource):
 
 
 class TestCreation(Resource):
+    @jwt_required
     @use_args(TestsRegistrationSchema, locations=("json",))
     def post(self, args):
         """
@@ -71,11 +84,18 @@ class TestCreation(Resource):
         responses:
           201:
             description: OK
+          400:
+                description: Bad request
+                content:
+                  application/json:
+                    schema: ErrorSchema
+                    example:
+                      message: [Wrong input data]
         """
         test_name = args['test'].test_name
         test_time = args['test'].max_time
-        if test_time is None or test_time is None:
-            return fail_response("Test data is not correct", code=400)
+        if test_name is None or test_time is None:
+            return fail_response(msg="Wrong input data", code=400)
         test_id = application.orm.add_test(test_name=test_name, max_time=test_time)
         for question in args['questions']:
             application.orm.add_question(question=question.question, question_type=question.question_type,
@@ -87,6 +107,7 @@ class TestCreation(Resource):
 
 
 class TestManagement(Resource):
+    @jwt_required
     def get(self, test_id):
         """
         ---
@@ -156,6 +177,7 @@ class TestManagement(Resource):
         res.data.update({'questions': questions})
         return jsonify(res.data)
 
+    @jwt_required
     @use_kwargs({"test_id": fields.Int(location="query")})
     @use_args(TestsRegistrationSchema())
     def put(self, args, test_id):
@@ -184,8 +206,20 @@ class TestManagement(Resource):
                         schema: ErrorSchema
                         example:
                           message: [Test not found]
+            400:
+                description: Bad request
+                content:
+                  application/json:
+                    schema: ErrorSchema
+                    example:
+                      message: [Wrong input data]
 
         """
+        test_name = args['test'].test_name
+        test_time = args['test'].max_time
+        req_test_id = args['test'].id
+        if test_name is None or test_time is None or req_test_id is None:
+            return fail_response(msg="Wrong input data", code=400)
         test_id = application.orm.update_test(test_id=args['test'].id, test_name=args['test'].test_name,
                                               max_time=args['test'].max_time)
         if test_id is None:
@@ -201,6 +235,7 @@ class TestManagement(Resource):
                                                 points=question.points, test_id=int(test_id), question_id=question.id)
         return generic_response(status='Success', msg="Test changed", code=201)
 
+    @jwt_required
     def delete(self, test_id):
         """
         ---
@@ -225,6 +260,7 @@ class TestManagement(Resource):
 
 
 class TestSubmissions(Resource):
+    @jwt_required
     def get(self, test_id):
         """
         ---
@@ -250,14 +286,13 @@ class TestSubmissions(Resource):
                     application/json:
                         schema: ErrorSchema
                         example:
-                          message: [Test not found]
+                          message: [Submission not found]
         """
         submissions = application.orm.get_submissions(test_id)
         if submissions is None:
-            return fail_response("Some problems with submissions retreiving", code=404)
-        test_schema = TestsSubmissionsSchema(many=True)
-        res = test_schema.dump(submissions)
-        return jsonify(res.data)
+            return fail_response("Submission not found", code=404)
+
+        return TestsSubmissionsSchema(many=True).dump(submissions)
 
 
 class TestStart(Resource):
