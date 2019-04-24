@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from typing import List, Optional
 
 from flask_jwt_extended import decode_token
@@ -770,6 +770,16 @@ class ORM:
             print(f'Could not delete candidate documents: {excpt}')
 
             return None
+
+    def get_users(self, page_num: int, num_of_users: int) -> Optional[List[Users]]:
+        try:
+            return self.session.query(Users).paginate(page_num, num_of_users, False).items
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get users: {excpt}')
+
+        return None
+
 
     def _remove_record(self, model, row_id) -> bool:
         """

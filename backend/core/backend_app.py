@@ -53,7 +53,12 @@ class FormsBackend(object):
             'profile': {
                 '': profile.UserProfile,
                 'register': profile.UserRegistration,
-                'list': profile.UsersList,
+                'list': {
+                    '<int:page>': {
+                        '': profile.UsersList
+                    },
+                }
+
             },
             'tests': {
                 '<int:test_id>': {

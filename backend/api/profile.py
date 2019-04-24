@@ -1,13 +1,15 @@
+from flask.json import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restful import Resource
-from webargs.flaskparser import use_args
 from passlib.hash import argon2
 from validate_email import validate_email
+from webargs.flaskparser import use_args
 
-from backend.core.schema import RegistrationSchema
+from backend.core.schema import RegistrationSchema, UsersSchema
 from backend.helpers import success_response, fail_response, generic_response
-
 from server import application
+
+USERS_PER_PAGE = 5
 
 
 class UserRegistration(Resource):
@@ -99,8 +101,7 @@ class UserProfile(Resource):
 
 
 class UsersList(Resource):
-    @jwt_required
-    def get(self):
+    def get(self, page=1):
         """
         ---
         summary: Users list
@@ -117,12 +118,10 @@ class UsersList(Resource):
                     - $ref: '#/components/examples/ProfileFull'
         """
         current_user = get_jwt_identity()
+        users = application.orm.get_users(page_num=page, num_of_users=USERS_PER_PAGE)
+        if users is None:
+            return fail_response("Some problems with users retrieving", code=404)
+        user_schema = UsersSchema(many=True)
+        res = user_schema.dump(users)
 
-        return success_response([{
-            'email': current_user,
-            'name': 'Sergey',
-            'surname': 'Malyutkin',
-            'natinality': 'RU',
-            'gender': 'MALE',
-            'date_of_birth': '1970-01-01',
-        }])
+        return jsonify(res.data)
