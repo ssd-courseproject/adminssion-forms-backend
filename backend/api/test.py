@@ -1,10 +1,12 @@
 from flask.json import jsonify
+from flask_jwt_extended import jwt_required, get_current_user
 from flask_restful import Resource
 from marshmallow import fields
 from webargs.flaskparser import use_kwargs, use_args
 
+from backend.core.models import Users
 from backend.core.schema import TestsRegistrationSchema, TestsSchema, TestsSubmissionsSchema, QuestionsSchema
-from backend.helpers import fail_response, generic_response
+from backend.helpers import fail_response, generic_response, success_response
 from server import application
 
 
@@ -174,7 +176,6 @@ class TestSubmissions(Resource):
               name: test_id
               schema:
                   type: int
-
         responses:
             200:
                 description: OK
@@ -193,16 +194,15 @@ class TestSubmissions(Resource):
         """
         submissions = application.orm.get_submissions(test_id)
         if submissions is None:
-            return fail_response("Some problems with submissions retreiving")
-        test_schema = TestsSubmissionsSchema(many=True)
-        res = test_schema.dump(submissions)
-        return jsonify(res.data)
+            return fail_response("Some problems with submissions retrieving")
+
+        return TestsSubmissionsSchema(many=True).dump(submissions)
 
 
 class TestStart(Resource):
-    @use_kwargs({"test_id": fields.Int(location="query")})
-    @use_args({"test_id": fields.Int(), "candidate_id": fields.Int()}, locations=("json",))
-    def post(self, args, test_id):
+    @jwt_required
+    #@use_kwargs({"test_id": fields.Int(location="query")})
+    def post(self, test_id):
         """
         ---
         summary: Test start
@@ -213,15 +213,12 @@ class TestStart(Resource):
               name: test_id
               schema:
                   type: int
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema: TestsSubmissionsSchema
         responses:
             201:
                 description: OK
         """
+        user: Users = get_current_user()
 
-        submission_id = application.orm.init_submission(candidate_id=args['candidate_id'], test_id=args['test_id'])
-        return generic_response(status='Created', msg=submission_id, code=201)
+        submission = application.orm.init_submission(candidate_id=user.id, test_id=test_id)
+
+        return success_response(msg=submission.id, code=201)

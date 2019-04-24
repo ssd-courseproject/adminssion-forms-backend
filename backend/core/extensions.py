@@ -4,11 +4,17 @@ from backend.core.backend_app import FormsBackend
 
 
 def application_extend(application: FormsBackend):
+    from backend.core.models import Users
+
     @application.jwt.token_in_blacklist_loader
     def check_if_token_in_blacklist(decrypted_token):
         return False
         # jti = decrypted_token['jti']
         # return RevokedTokenModel.is_jti_blacklisted(jti)
+
+    @application.jwt.user_loader_callback_loader
+    def fetch_user(identity) -> Users:
+        return application.orm.get_user_auth_by_email(identity)
 
     @application.app.errorhandler(422)
     def handle_error(err):

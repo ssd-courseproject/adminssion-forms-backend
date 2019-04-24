@@ -226,8 +226,8 @@ class ORM:
     Should automatically handle starting/finishing the session
     """
 
-    def __init__(self, db: SQLAlchemy):
-        self.session = db.session
+    def __init__(self, db_instance: SQLAlchemy):
+        self.session = db_instance.session
 
     # ------------
     # SESSION
@@ -301,24 +301,20 @@ class ORM:
 
         return None
 
-    def add_candidates_info(self, candidate_id: int, nationaity: str = None,
-                            gender: bool = False, date_of_birth: Date = None, subscription_email: str = None,
-                            skype: str = None, phone: str = None) -> Optional[CandidatesInfo]:
+    def add_candidates_info(self, candidate_id: int,
+                            nationality: str = None, gender: bool = False,
+                            date_of_birth: Date = None) -> Optional[CandidatesInfo]:
         """
         Adds all necessary candidate's info
         :param candidate_id: id of the given candidate
-        :param nationaity: nationality
+        :param nationality: nationality
         :param gender: boolean value. False for male and true for female
         :param date_of_birth: datetime
-        :param subscription_email: email used for autorization
-        :param skype: skype username
-        :param phone: mobile phone of the user
         :return: id of the given candidate or None in case of error
         """
         try:
-            candidates_info = CandidatesInfo(candidate_id=candidate_id, nationaity=nationaity, gender=gender,
-                                             date_of_birth=date_of_birth,
-                                             subscription_email=subscription_email, skype=skype, phone=phone)
+            candidates_info = CandidatesInfo(candidate_id=candidate_id, nationaity=nationality,
+                                             gender=gender, date_of_birth=date_of_birth)
             self.session.add(candidates_info)
             self.session.commit()
 
@@ -345,18 +341,18 @@ class ORM:
 
         return None
 
-    def add_candidates_autorization(self, email: str, id: int, password: str) -> Optional[int]:
+    def add_candidates_authorization(self, email: str, u_id: int, password: str) -> Optional[int]:
         """
         Fill in all necessary fields for autorization
         :param email: candidates's email
-        :param id: candidate's id
+        :param u_id: candidate's id
         :param password: candidates's password
         :return: new or existing autorization instance or None in case of error
         """
         try:
             existing_candidates_autorization = self.session.query(UsersAutorization).filter_by(email=email).first()
             if not existing_candidates_autorization:
-                candidate_autorization = UsersAutorization(email=email, id=id, password=password)
+                candidate_autorization = UsersAutorization(email=email, id=u_id, password=password)
                 self.session.add(candidate_autorization)
                 self.session.commit()
                 return candidate_autorization
@@ -367,16 +363,13 @@ class ORM:
             print(f'Couldn\'t add candidates autorization: {excpt}')
         return None
 
-    def add_candidates_documents(self, id: int, cv: str = None,
-                                 letter_of_recommendation: str = None, motivation_letter: str = None,
-                                 passport: str = None, photo: str = None, project_description: str = None,
+    def add_candidates_documents(self, u_id: int,
+                                 passport: str = None, photo: str = None,
+                                 project_description: str = None,
                                  transcript: str = None) -> Optional[CandidatesDocuments]:
         """
         Add all necessary candidates documents (links to the files)
-        :param id: candidate's id
-        :param cv: link to the cv
-        :param letter_of_recommendation: link to the letter of recommendation
-        :param motivation_letter: link to the motivation letter
+        :param u_id: candidate's id
         :param passport: link to the scan of the passport
         :param photo: link to the photo of given candidate
         :param project_description: link to the project description
@@ -384,9 +377,7 @@ class ORM:
         :return: id of the given candidate or None in case of error
         """
         try:
-            candidates_documents = CandidatesDocuments(id=id, cv=cv,
-                                                       letter_of_recomendation=letter_of_recommendation,
-                                                       motivation_letter=motivation_letter, passport=passport,
+            candidates_documents = CandidatesDocuments(id=u_id, passport=passport,
                                                        photo=photo, project_description=project_description,
                                                        transcript=transcript)
             self.session.add(candidates_documents)
@@ -507,14 +498,16 @@ class ORM:
         try:
             new_submission = TestsSubmissions(candidate_id=candidate_id,
                                               time_start=datetime.utcnow(), submitted=False,
-                                              test_id=BigInteger._to_instance(test_id))
+                                              test_id=test_id)
 
             self.session.add(new_submission)
             self.session.commit()
-            return new_submission.id
+
+            return new_submission
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t add test: {excpt}')
+
         return None
 
     def update_submission(self, sub_id: int, submitted: bool, graded_by: int) -> Optional[int]:
