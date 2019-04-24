@@ -560,19 +560,22 @@ class ORM:
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get user: {excpt}')
+
         return None
 
-    def get_user_by_email(self, email: str) -> Optional[Users]:
+    def get_user_auth_by_email(self, email: str) -> Optional[UsersAutorization]:
         """
         :param email: email of the user
-        :return: user's instances or None if there is no such candidate
+        :return: user auth instance or None if there is no such candidate
         """
         try:
-            user = self.session.query(Users).get(id)
-            return user
+            user_auth = self.session.query(UsersAutorization).filter({UsersAutorization.email: email}).one()
+
+            return user_auth
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get user: {excpt}')
+
         return None
 
     def get_token(self, id) -> Optional[RevokedToken]:

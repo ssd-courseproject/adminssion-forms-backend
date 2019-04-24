@@ -27,7 +27,7 @@ class UserRegistration(Resource):
         responses:
           201:
             description: OK
-          406:
+          409:
             description: User already exists
             content:
               application/json:
@@ -37,9 +37,9 @@ class UserRegistration(Resource):
         """
         ORM = application.orm
 
-        existing_user = ORM.get_user_by_email(email=args["email"])
+        existing_user = ORM.get_user_auth_by_email(email=args["email"])
         if existing_user:
-            return fail_response('User with such email already exists', code=406)
+            return fail_response('User with such email already exists', code=409)
 
         user = ORM.add_user(first_name=args["name"], last_name=args["surname"])
         ORM.add_candidates_autorization(id=user.id, email=args["email"], password=argon2.hash(args["password"]))

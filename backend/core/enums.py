@@ -21,6 +21,11 @@ class UsersRole(EnumExtended):
     MANAGER = 4
 
 
+class TokenType(EnumExtended):
+    ACCESS = 'access'
+    REFRESH = 'refresh'
+
+
 class Gender(EnumExtended):
     FEMALE = False
     MALE = True
