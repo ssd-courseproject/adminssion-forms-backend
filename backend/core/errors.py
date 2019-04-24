@@ -1,8 +1,4 @@
 error_descriptions = {
-    'UserAlreadyExistsError': {
-        'message': ["A user with that email already exists."],
-        'status': 409,
-    },
     'ResourceDoesNotExist': {
         'message': ["A resource with that ID no longer exists."],
         'status': 410,
@@ -18,11 +14,15 @@ error_descriptions = {
     'MethodNotAllowed': {
         'message': ["The method is not allowed for the requested URL."],
         'status': 405,
+    },
+    'InsufficientRights': {
+        'message': ["You have insufficient rights fot this action"],
+        'status': 403
     }
 }
 
 
-class UserAlreadyExist(Exception):
+class InsufficientRights(Exception):
     pass
 
 

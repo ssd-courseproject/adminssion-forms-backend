@@ -4,6 +4,7 @@ from flask_restful import Resource
 from marshmallow import fields
 from webargs.flaskparser import use_kwargs, use_args
 
+from backend.core.decorators import candidate_role_required
 from backend.core.models import Users
 from backend.core.schema import TestsRegistrationSchema, TestsSchema, TestsSubmissionsSchema, QuestionsSchema
 from backend.helpers import fail_response, generic_response, success_response
@@ -261,6 +262,7 @@ class TestSubmissions(Resource):
 
 class TestStart(Resource):
     @jwt_required
+    @candidate_role_required
     # @use_kwargs({"test_id": fields.Int(location="query")})
     def post(self, test_id):
         """
