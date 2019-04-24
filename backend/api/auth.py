@@ -1,11 +1,11 @@
-from flask import jsonify
 from flask_jwt_extended import jwt_required, jwt_refresh_token_required, get_jwt_identity, create_access_token, \
-    get_raw_jwt, create_refresh_token
+    get_raw_jwt, create_refresh_token, get_current_user
 from flask_restful import Resource
 from webargs.flaskparser import use_args, use_kwargs
 from passlib.hash import argon2
 
 from backend.core.enums import TokenType
+from backend.core.models import Users
 from backend.core.schema import TokensSchema, LoginSchema
 from backend.helpers import success_response, fail_response
 
@@ -82,12 +82,11 @@ class UserLogout(Resource):
             description: OK
         """
         jti = get_raw_jwt()['jti']
-        try:
-            # revoked_token = RevokedTokenModel(jti=jti)
-            # revoked_token.add()
-            return jsonify(), 202
-        except:
+
+        if not application.orm.revoke_token_by_jti(jti):
             return fail_response('Something went wrong', code=500)
+
+        return success_response(_data={'jti': jti}, code=202)
 
 
 class TokenRefresh(Resource):
@@ -106,8 +105,13 @@ class TokenRefresh(Resource):
                 example:
                   access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE1NTQzMDU1MjYsIm5iZiI6MTU1NDMwNTUyNiwianRpIjoiNzk3ZWZhYWQtZTI4ZS00ZTIyLWE2N2EtZTBmYjA4ZmI1NTY5IiwiZXhwIjoxNTU0MzA2NDI2LCJpZGVudGl0eSI6InN1cGVyQGlubm9wb2xpcy5ydSIsImZyZXNoIjpmYWxzZSwidHlwZSI6ImFjY2VzcyJ9.hvsxNM9SjBapbv1WzpGnn0G5T8N0amAANM9i2woP0kk
         """
-        current_user = get_jwt_identity()
-        access_token = create_access_token(identity=current_user)
+        ORM = application.orm
+
+        identity = get_jwt_identity()
+        user: Users = get_current_user()
+
+        access_token = create_access_token(identity=identity)
+        ORM.add_token(token=access_token, token_type=TokenType.ACCESS, user_id=user.id)
 
         return TokensSchema().dump({
             'access_token': access_token

@@ -624,6 +624,19 @@ class ORM:
 
         return None
 
+    def revoke_token_by_jti(self, jti: str) -> Optional[bool]:
+        try:
+            res = self.session.query(TokenBlacklist).filter_by(jti=jti).update({'revoked': True})
+            self.session.flush()
+            self.session.commit()
+
+            return res
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get token: {excpt}')
+
+            return None
+
     def get_test(self, t_id: int) -> Optional[Tests]:
         """
         Takes test instance from the database by test id
@@ -693,7 +706,7 @@ class ORM:
 
         return None
 
-    def get_qustions_test(self, question_id: int) -> Optional[QuestionsTests]:
+    def get_questions_test(self, question_id: int) -> Optional[QuestionsTests]:
         """
         Returns instance from the table that links questions and tests
         :param question_id: id of the question to search appropriate test

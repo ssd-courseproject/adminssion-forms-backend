@@ -23,6 +23,10 @@ error_descriptions = {
         'message': ["Your token has been revoked."],
         'status': 420,
     },
+    'WrongTokenError': {
+        'message': ["Provided wrong type of token."],
+        'status': 450,
+    }
 }
 
 

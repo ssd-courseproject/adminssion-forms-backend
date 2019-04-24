@@ -18,6 +18,10 @@ def fail_response(msg=None, code=None, **kwargs):
 
 
 def generic_response(status, msg=None, code=None, **kwargs):
+    if '_data' in kwargs and isinstance(kwargs.get('_data'), dict):
+        data = kwargs.pop('_data')
+        kwargs = {**kwargs, **data}
+
     data = {'status': status, 'data': kwargs}
     if msg is not None:
         data['message'] = [msg]
