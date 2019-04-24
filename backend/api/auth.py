@@ -50,8 +50,13 @@ class UserLogin(Resource):
         if not user_auth:
             return fail_response('Bad email or password', code=406)
 
-        if not argon2.verify(password, user_auth.password):
-            return fail_response('Bad email or password', 406)
+        try:
+            if not argon2.verify(password, user_auth.password):
+                return fail_response('Bad email or password', 406)
+        except ValueError as excpt:
+            print(f"Failed to verify hash: {excpt}")
+
+            return fail_response('Bad password hash', 501)
 
         try:
             access_token = create_access_token(identity=email)

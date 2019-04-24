@@ -321,7 +321,7 @@ class ORM:
         :return: id of the given candidate or None in case of error
         """
         try:
-            candidates_info = CandidatesInfo(candidate_id=candidate_id, nationaity=nationality,
+            candidates_info = CandidatesInfo(id=candidate_id, nationaity=nationality,
                                              gender=gender, date_of_birth=date_of_birth)
             self.session.add(candidates_info)
             self.session.commit()
