@@ -24,10 +24,31 @@ class TestsList(Resource):
                         schema:
                             type: array
                             items: TestsSchema
+                            example: [
+                                            {
+                                                "archived": false,
+                                                "id": 4,
+                                                "max_time": null,
+                                                "questions_tests": [],
+                                                "test_name": "4"
+                                            },    {
+                                                "archived": false,
+                                                "id": 5,
+                                                "max_time": null,
+                                                "questions_tests": [],
+                                                "test_name": "4"
+                                            }]
+            404:
+                description: Tests not found
+                content:
+                      application/json:
+                        schema: ErrorSchema
+
+
         """
         tests = application.orm.get_tests()
         if tests is None:
-            return fail_response("Some problems with tests retreiving")
+            return fail_response("Some problems with tests retrieving", code=404)
         test_schema = TestsSchema(many=True)
         res = test_schema.dump(tests)
 
@@ -50,11 +71,17 @@ class TestCreation(Resource):
           201:
             description: OK
         """
-        test_id = application.orm.add_test(test_name=args['test'].test_name, max_time=args['test'].max_time)
+        test_name = args['test'].test_name
+        test_time = args['test'].max_time
+        if test_time is None or test_time is None:
+            return fail_response("Test data is not correct", code=400)
+        test_id = application.orm.add_test(test_name=test_name, max_time=test_time)
         for question in args['questions']:
             application.orm.add_question(question=question.question, question_type=question.question_type,
                                          answer=question.answer, manually_grading=question.manually_grading,
                                          points=question.points, test_id=int(test_id))
+        if test_id is None:
+            return fail_response("Test creation failed", code=500)
         return generic_response(status='Created', msg="Test created", code=201)
 
 
@@ -77,6 +104,36 @@ class TestManagement(Resource):
                 content:
                     application/json:
                         schema: TestsSchema
+                        example: {
+                                    "archived": false,
+                                    "id": 8,
+                                    "max_time": null,
+                                    "questions": [
+                                        {
+                                            "answer": "1",
+                                            "id": 5,
+                                            "manually_grading": true,
+                                            "points": 0,
+                                            "question": "2",
+                                            "question_type": 0,
+                                            "test": 5
+                                        },
+                                        {
+                                            "answer": "1",
+                                            "id": 9,
+                                            "manually_grading": true,
+                                            "points": 0,
+                                            "question": "2",
+                                            "question_type": 0,
+                                            "test": 9
+                                        }
+                                    ],
+                                    "questions_tests": [
+                                        5,
+                                        9
+                                    ],
+                                    "test_name": "45"
+                                }
             404:
                 description: Not found
                 content:
@@ -130,6 +187,8 @@ class TestManagement(Resource):
         """
         test_id = application.orm.update_test(test_id=args['test'].id, test_name=args['test'].test_name,
                                               max_time=args['test'].max_time)
+        if test_id is None:
+            return fail_response("Test is not found", code=404)
         for question in args['questions']:
             if question.id is None:
                 application.orm.add_question(question=question.question, question_type=question.question_type,
@@ -161,7 +220,7 @@ class TestManagement(Resource):
         success = application.orm.delete_test(test_id)
         if success:
             return generic_response(status='success', code=201, msg="Deleted")
-        return fail_response(msg="Cant delete test")
+        return fail_response(msg="Can't delete test", code=406)
 
 
 class TestSubmissions(Resource):
@@ -194,14 +253,15 @@ class TestSubmissions(Resource):
         """
         submissions = application.orm.get_submissions(test_id)
         if submissions is None:
-            return fail_response("Some problems with submissions retrieving")
-
-        return TestsSubmissionsSchema(many=True).dump(submissions)
+            return fail_response("Some problems with submissions retreiving", code=404)
+        test_schema = TestsSubmissionsSchema(many=True)
+        res = test_schema.dump(submissions)
+        return jsonify(res.data)
 
 
 class TestStart(Resource):
     @jwt_required
-    #@use_kwargs({"test_id": fields.Int(location="query")})
+    # @use_kwargs({"test_id": fields.Int(location="query")})
     def post(self, test_id):
         """
         ---
@@ -220,5 +280,7 @@ class TestStart(Resource):
         user: Users = get_current_user()
 
         submission = application.orm.init_submission(candidate_id=user.id, test_id=test_id)
+        if submission is None:
+            return fail_response("Submission was not created", code=406)
 
         return success_response(msg=submission.id, code=201)
