@@ -5,6 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Date, Boolean, Text, BigInteger, ForeignKey, Numeric, ARRAY, Integer
 from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
 
+from backend.core.enums import UsersRole, CandidateStatus
 from server import application
 
 db = application.db
@@ -266,18 +267,21 @@ class ORM:
 
     # ------------
     # ADD
-    def add_user(self, first_name: str = None, last_name: str = None) -> Optional[int]:
+    def add_user(self, first_name: str = None, last_name: str = None, role: int = UsersRole.CANDIDATE) -> Optional[
+        Users]:
         """
         Adds new candidate to the database
         """
         try:
-            new_candidate = Users(first_name=first_name, last_name=last_name)
+            new_candidate = Users(first_name=first_name, last_name=last_name, role=role)
             self.session.add(new_candidate)
             self.session.commit()
+
             return new_candidate
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t add new candidate: {excpt}')
+
         return None
 
     def add_token(self, jti, date, expires, token_type, user_id, revoked=False) -> Optional[int]:
@@ -292,7 +296,7 @@ class ORM:
             print(f'Couldn\'t add new token: {excpt}')
         return None
 
-    def add_candidates_info(self, candidate_id, nationaity: str = None, gender: bool = False,
+    def add_candidates_info(self, candidate_id: int, nationaity: str = None, gender: bool = False,
                             date_of_birth: Date = None,
                             subscription_email: str = None, skype: str = None, phone: str = None) -> Optional[int]:
         """
@@ -317,6 +321,10 @@ class ORM:
             self.session.rollback()
             print(f'Couldn\'t add candidates info: {excpt}')
         return None
+
+    def add_candidates_status(self, candidate_id: int, status: int = CandidateStatus.PENDING, gender: bool = None,
+                              admission_date: str = None):
+        pass
 
     def add_candidates_autorization(self, email: str, id: int, password: str) -> Optional[int]:
         """
@@ -554,6 +562,19 @@ class ORM:
             print(f'Couldn\'t get user: {excpt}')
         return None
 
+    def get_user_by_email(self, email: str) -> Optional[Users]:
+        """
+        :param email: email of the user
+        :return: user's instances or None if there is no such candidate
+        """
+        try:
+            user = self.session.query(Users).get(id)
+            return user
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get user: {excpt}')
+        return None
+
     def get_token(self, id) -> Optional[RevokedToken]:
         """
         Get token's instance by given id
@@ -566,251 +587,6 @@ class ORM:
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get token: {excpt}')
-        return None
-
-    def get_candidate_name_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's name by given id
-        :param id: id of the candidate
-        :return: candidate's name or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(Users).get(id)
-            return candidate.first_name
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate name: {excpt}')
-        return None
-
-    def get_candidate_surname_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's surname by given id
-        :param id: id of the candidate
-        :return: candidate's surname or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(Users).get(id)
-            return candidate.last_name
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate surname: {excpt}')
-        return None
-
-    def get_candidate_info_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's info instance by given id
-        :param id: id of the candidate
-        :return: candidate's info instances or None if there is no such candidate
-        """
-        try:
-            candidate_info = self.session.query(CandidatesInfo).get(id)
-            return candidate_info
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates info: {excpt}')
-        return None
-
-    def get_candidate_nationality_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's nationality by given id
-        :param id: id of the candidate
-        :return: candidate's nationality or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            return candidate.nationality
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate nationality: {excpt}')
-        return None
-
-    def get_candidate_gender_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's gender by given id. Converts it to the male or female instead of boolean value.
-        :param id: id of the candidate
-        :return: candidate's gender or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            gender = candidate.gender
-            if gender == False:
-                return ('Male')
-            else:
-                return ('Female')
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate gender: {excpt}')
-        return None
-
-    def get_candidate_age_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's date of birth and calculates age
-        :param id: id of the candidate
-        :return: candidate's age or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            date_of_birth = candidate.date_of_birth
-            today = date.today()
-            return today.year - date_of_birth.year - (
-                    (today.month, today.day) < (date_of_birth.month, date_of_birth.day))
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate nationality: {excpt}')
-        return None
-
-    def get_candidate_email_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's email by given id
-        :param id: id of the candidate
-        :return: candidate's email or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            return candidate.email
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate email: {excpt}')
-        return None
-
-    def get_candidate_skype_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's skype by given id
-        :param id: id of the candidate
-        :return: candidate's skype or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            return candidate.skype
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate skype: {excpt}')
-        return None
-
-    def get_candidate_phone_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's phone by given id
-        :param id: id of the candidate
-        :return: candidate's phone or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            return candidate.phone
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate nationality: {excpt}')
-        return None
-
-    def get_candidate_documents_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's documents instance by given id
-        :param id: id of the candidate
-        :return: candidate's documents instances or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates documents: {excpt}')
-        return None
-
-    def get_candidate_cv_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's cv by given id
-        :param id: id of the candidate
-        :return: candidate's cv or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.cv
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates cv: {excpt}')
-        return None
-
-    def get_candidate_letter_of_recommendation_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's letter of recomendation by given id
-        :param id: id of the candidate
-        :return: candidate's letter of recommendation or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.letter_of_recomendation
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates letter of recomendation: {excpt}')
-        return None
-
-    def get_candidate_motivation_letter_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's motivation letter by given id
-        :param id: id of the candidate
-        :return: candidate's motivation letter or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.motivation_letter
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates motivation letter: {excpt}')
-        return None
-
-    def get_candidate_passport_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's passport by given id
-        :param id: id of the candidate
-        :return: candidate's passport or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.passport
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates passport: {excpt}')
-        return None
-
-    def get_candidate_photo_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's photo by given id
-        :param id: id of the candidate
-        :return: candidate's photo or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.photo
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates photo: {excpt}')
-        return None
-
-    def get_candidate_project_description_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's project description by given id
-        :param id: id of the candidate
-        :return: candidate's project description or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.project_description
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates project description: {excpt}')
-        return None
-
-    def get_candidate_transcript_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's transcript by given id
-        :param id: id of the candidate
-        :return: candidate's transcript or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.transcript
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates transcript: {excpt}')
         return None
 
     def get_test(self, id: int) -> Optional[Tests]:
@@ -840,19 +616,6 @@ class ORM:
             print(f'Couldn\'t get tests: {excpt}')
         return None
 
-    def get_submissions(self, test_id) -> Optional[List[TestsSubmissions]]:
-        """
-        Takes all tests instances from the database
-        :return: all test instances from the database.
-        """
-        try:
-            submissions = self.session.query(TestsSubmissions).filter(TestsSubmissions.test_id == test_id).all()
-            return submissions
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get tests: {excpt}')
-        return None
-
     def get_submission(self, sub_id) -> Optional[List[TestsSubmissions]]:
         """
         Takes all tests instances from the database
@@ -861,6 +624,19 @@ class ORM:
         try:
             submission = self.session.query(TestsSubmissions).get(sub_id)
             return submission
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get tests: {excpt}')
+        return None
+
+    def get_submissions(self, test_id) -> Optional[List[TestsSubmissions]]:
+        """
+        Takes all tests instances from the database
+        :return: all test instances from the database.
+        """
+        try:
+            submissions = self.session.query(TestsSubmissions).filter(TestsSubmissions.test_id == test_id).all()
+            return submissions
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get tests: {excpt}')
@@ -897,62 +673,72 @@ class ORM:
     # ------------
     # DELETE
 
-    def delete_token(self, id: int) -> Optional[int]:
+    def delete_token(self, tid: int) -> Optional[int]:
         """
         Deletes given token by id
-        :param id: id of the given token to delete
-        :return: True if token was delete successfully, False if token was not found, None in case of error
+        :param tid: id of the given token to delete
+        :return:
+            True if token was delete successfully,
+            False if token was not found,
+            None in case of error
         """
         try:
-            existing_token = self.session.query(RevokedToken).filter_by(id=id).first()
-            if existing_token:
-                self.session.delete(existing_token)
-                self.session.commit()
-                return True
-            else:
-                return False  # there is no such token
-
+            return self._remove_record(RevokedToken, tid)
         except Exception as excpt:
-            self.session.rollback()
-        print(f'Couldn\'t delete revoked token: {excpt}')
-        return None
+            print(f'Could not delete token: {excpt}')
 
-    def delete_candidate(self, id: int) -> Optional[int]:
+            return None
+
+    def delete_candidate(self, uid: int) -> Optional[int]:
         """
         This function will delete all candidates data including candidate's info, tests passed by candidate and etc
-        :param id: the id of the candidate
-        :return: True if candidate was delete successfully, False if candidate was not found, None in case of error
+        :param uid: the id of the candidate
+        :return:
+            True if candidate was delete successfully,
+            False if candidate was not found,
+            None in case of error
         """
         try:
-            existiing_candidate = self.session.query(Users).filter_by(id=id).first()
-            if existiing_candidate:
-                self.session.delete(existiing_candidate)
-                self.session.commit()
-                return True
-            else:
-                return False  # there is no such candidate
-
+            return self._remove_record(Users, uid)
         except Exception as excpt:
-            self.session.rollback()
-        print(f'Couldn\'t delete candidate: {test_id}')
-        return None
+            print(f'Could not delete candidate: {excpt}')
 
-    def delete_candidates_documents(self, id: int) -> Optional[int]:
+            return None
+
+    def delete_candidates_documents(self, uid: int) -> Optional[bool]:
         """
         Deletes all candidates' documents by given candidate's id
-        :param id: the id of the candidate
-        :return: True if candidate's documents were deleted successfully, False if candidate_documents were not found, None in case of error
+        :param uid: the id of the candidate
+        :return:
+            True if candidate's documents were deleted successfully,
+            False if candidate_documents were not found,
+            None in case of error
         """
         try:
-            existiing_candidates_documents = self.session.query(CandidatesDocuments).filter_by(id=id).first()
-            if existiing_candidates_documents:
-                self.session.delete(existiing_candidates_documents)
+            return self._remove_record(CandidatesDocuments, uid)
+        except Exception as excpt:
+            print(f'Could not delete candidate documents: {excpt}')
+
+            return None
+
+    def _remove_record(self, model, row_id) -> bool:
+        """
+        Deletes row for given model
+        :param model
+        :param row_id
+        :return:
+        """
+        try:
+            model = self.session.query(model).filter_by(id=row_id).first()
+            if model:
+                self.session.delete(model)
                 self.session.commit()
+
                 return True
             else:
-                return False  # there is no such candidates documents
+                return False
 
-        except Exception as excpt:
+        except Exception:
             self.session.rollback()
-        print(f'Couldn\'t delete candidate documents: {excpt}')
-        return None
+
+            raise

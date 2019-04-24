@@ -22,7 +22,7 @@ cd /home/dilshatsalih/adminssion-forms-backend/
 
 Activate virtualenv:
 ```bash
-source ../ssd_new_1/bin/activate
+source ../ssd/ssd_new_1/bin/activate
 ```
 
 In foreground:

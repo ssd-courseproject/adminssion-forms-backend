@@ -1,8 +1,11 @@
 from flask_marshmallow import Schema
 from flask_marshmallow.sqla import ModelSchema
 from marshmallow import fields
+from marshmallow.validate import OneOf
+from marshmallow_enum import EnumField
 from marshmallow_sqlalchemy import field_for
 
+from backend.core.enums import Gender
 from backend.core.models import Users, UsersAutorization, CandidatesInfo, CandidatesInterview, CandidatesDocuments, \
     CandidatesStatus, CandidatesAnswers, TestsSubmissions, QuestionsTests, Tests, Questions
 
@@ -26,6 +29,8 @@ class UsersAutorizationSchema(ModelSchema):
 class CandidatesInfoSchema(ModelSchema):
     class Meta:
         model = CandidatesInfo
+
+    gender = EnumField(Gender, validate=OneOf(Gender.names()))
 
 
 class CandidatesDocumentsSchema(ModelSchema):

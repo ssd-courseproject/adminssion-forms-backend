@@ -11,8 +11,11 @@ apispec-webframeworks
 marshmallow
 flask-marshmallow
 marshmallow-sqlalchemy
+marshmallow_enum
+
 webargs
 faker
 simplejson
 
 PyYAML
+enum34

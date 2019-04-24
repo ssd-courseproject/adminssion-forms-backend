@@ -2,9 +2,10 @@ from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restful import Resource
 from webargs.flaskparser import use_args
+from passlib.hash import argon2
 
 from backend.core.schema import RegistrationSchema
-from backend.helpers import success_response
+from backend.helpers import success_response, fail_response
 
 from server import application
 
@@ -34,8 +35,17 @@ class UserRegistration(Resource):
                 example:
                   message: [A user with that email already exists.]
         """
-        user = application.orm.add_user(first_name=args["name"], last_name=args["surname"])
-        auth_info = application.orm.add_candidates_autorization(id=user.id, email=args["email"], password=args["password"])
+        ORM = application.orm
+
+        existing_user = ORM.get_user_by_email(email=args["email"])
+        if existing_user:
+            return fail_response('User with such email already exists', code=406)
+
+        user = ORM.add_user(first_name=args["name"], last_name=args["surname"])
+        ORM.add_candidates_autorization(id=user.id, email=args["email"], password=argon2.hash(args["password"]))
+
+        ORM.add_candidates_documents(id=user.id)
+        ORM.add_candidates_info(candidate_id=user.id)
 
         return jsonify(), 201
 
