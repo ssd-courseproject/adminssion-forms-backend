@@ -1,24 +1,36 @@
 error_descriptions = {
-    'UserAlreadyExistsError': {
-        'message': ["A user with that email already exists."],
-        'status': 409,
+    'NoAuthorizationError': {
+        'message': ["Authorization token not provided."],
+        'status': 401,
+    },
+    'InsufficientRights': {
+        'message': ["You have insufficient rights fot this action"],
+        'status': 403
+    },
+    'MethodNotAllowed': {
+        'message': ["The method is not allowed for the requested URL."],
+        'status': 405,
     },
     'ResourceDoesNotExist': {
         'message': ["A resource with that ID no longer exists."],
         'status': 410,
     },
     'ExpiredSignatureError': {
-        'message': ["Your token is expired"],
+        'message': ["Your token is expired."],
         'status': 419,
     },
-    'NoAuthorizationError': {
-        'message': ["Authorization token not provided"],
-        'status': 401,
+    'RevokedTokenError': {
+        'message': ["Your token has been revoked."],
+        'status': 420,
+    },
+    'WrongTokenError': {
+        'message': ["Provided wrong type of token."],
+        'status': 450,
     }
 }
 
 
-class UserAlreadyExist(Exception):
+class InsufficientRights(Exception):
     pass
 
 

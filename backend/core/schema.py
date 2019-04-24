@@ -1,8 +1,11 @@
 from flask_marshmallow import Schema
 from flask_marshmallow.sqla import ModelSchema
 from marshmallow import fields
+from marshmallow.validate import OneOf
+from marshmallow_enum import EnumField
 from marshmallow_sqlalchemy import field_for
 
+from backend.core.enums import Gender
 from backend.core.models import Users, UsersAutorization, CandidatesInfo, CandidatesInterview, CandidatesDocuments, \
     CandidatesStatus, CandidatesAnswers, TestsSubmissions, QuestionsTests, Tests, Questions
 
@@ -27,6 +30,8 @@ class CandidatesInfoSchema(ModelSchema):
     class Meta:
         model = CandidatesInfo
 
+    gender = EnumField(Gender, validate=OneOf(Gender.names()))
+
 
 class CandidatesDocumentsSchema(ModelSchema):
     class Meta:
@@ -47,10 +52,14 @@ class CandidatesAnswersSchema(ModelSchema):
     class Meta:
         model = CandidatesAnswers
 
+    question_id = field_for(CandidatesAnswers, 'question_id', dump_only=False)
+    submission_id = field_for(CandidatesAnswers, 'submission_id', dump_only=False)
+
 
 class TestsSubmissionsSchema(ModelSchema):
     class Meta:
         model = TestsSubmissions
+        strict = True
 
 
 class QuestionsTestsSchema(ModelSchema):
@@ -66,6 +75,16 @@ class TestsSchema(ModelSchema):
 class QuestionsSchema(ModelSchema):
     class Meta:
         model = Questions
+
+
+class TestsRegistrationSchema(Schema):
+    test = fields.Nested(TestsSchema)
+    questions = fields.List(fields.Nested(QuestionsSchema))
+
+
+class TestsSubmissionWithAnswersSchema(Schema):
+    submission = fields.Nested(TestsSubmissionsSchema)
+    answers = fields.List(fields.Nested(CandidatesAnswersSchema))
 
 
 ######

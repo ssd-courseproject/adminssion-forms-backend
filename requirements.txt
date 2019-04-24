@@ -11,7 +11,14 @@ apispec-webframeworks
 marshmallow
 flask-marshmallow
 marshmallow-sqlalchemy
+marshmallow_enum
+
 webargs
 faker
+simplejson
+validate_email
 
+Py3DNS
 PyYAML
+enum34
+argon2_cffi

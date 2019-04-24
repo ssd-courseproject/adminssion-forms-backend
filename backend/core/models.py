@@ -1,24 +1,32 @@
-from typing import Set, List, Optional, Tuple
-from sqlalchemy import create_engine, Column, Date, Boolean, Text, BigInteger, ForeignKey, ForeignKeyConstraint, \
-    UniqueConstraint, Numeric, Enum, ARRAY
-from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
-from datetime import date, datetime
+from datetime import datetime
+from typing import List, Optional
+
+from flask_jwt_extended import decode_token
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Date, Boolean, Text, BigInteger, ForeignKey, Numeric, ARRAY, Integer, String, DateTime
+from sqlalchemy.orm import relationship
+
+from backend.core.enums import UsersRole, CandidateStatus, TokenType
+from backend.helpers import _epoch_utc_to_datetime
 from server import application
 
 db = application.db
 
 
-class RevokedToken(db.Model):
+class TokenBlacklist(db.Model):
     """
-    Storage of the token required for authentification
+    Storage of the token required for authentication
     """
-    __tablename__ = 'revoked_tokens'
+    __tablename__ = 'token_blacklist'
     __table_args__ = {'extend_existing': True}
 
     id = Column(BigInteger, primary_key=True)
-    jti = Column(Text())
-    date = Column(Date)
-    expired = Column(Boolean)
+    jti = Column(String(36), index=True, unique=True, nullable=False)
+    date = Column(DateTime, default=datetime.utcnow(), nullable=False)
+    expires = Column(DateTime, nullable=False)
+    revoked = Column(Boolean, default=False, nullable=False)
+    token_type = Column(Text, nullable=False)
+    user_id = Column(BigInteger, index=True, nullable=False)
 
 
 class Users(db.Model):
@@ -131,6 +139,24 @@ class CandidatesStatus(db.Model):
     admission_date = Column(Date)
 
 
+class Tests(db.Model):
+    """
+    All actual and archived tests in the system
+    """
+    __tablename__ = 'tests'
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(BigInteger, primary_key=True)
+    test_name = Column(Text)
+    max_time = Column(Integer)
+    archived = Column(Boolean)
+
+    questions_tests = relationship('QuestionsTests', cascade="all,delete", backref='tests',
+                                   uselist=True)  # one-to-one
+    # questions = relationship('Questions', cascade="all,delete", backref='questions_tests', # todo: is required?
+    # uselist=False)  # one-to-one
+
+
 class TestsSubmissions(db.Model):
     """
     Keeps data about tests that were submitted or started by a candidate
@@ -140,13 +166,14 @@ class TestsSubmissions(db.Model):
 
     id = Column(BigInteger, primary_key=True)
     candidate_id = Column(BigInteger, ForeignKey(Users.id))
+    test_id = Column(Integer, ForeignKey(Tests.id))
     time_start = Column(Date, default=datetime.utcnow)
     time_end = Column(Date)
     submitted = Column(Boolean)
     graded_by = (BigInteger, ForeignKey(Users.id))
 
     answers = relationship('CandidatesAnswers', cascade="all,delete", backref='questions_tests',
-                           uselist=False)
+                           uselist=True)
 
 
 class Questions(db.Model):
@@ -184,24 +211,6 @@ class CandidatesAnswers(db.Model):
     comments = Column(Text)
 
 
-class Tests(db.Model):
-    """
-    All actual and archived tests in the system
-    """
-    __tablename__ = 'tests'
-    __table_args__ = {'extend_existing': True}
-
-    id = Column(BigInteger, primary_key=True)
-    test_name = Column(Text)
-    max_time = Column(Date)
-    archived = Column(Boolean)
-
-    questions_tests = relationship('QuestionsTests', cascade="all,delete", backref='tests',
-                                   uselist=False)  # one-to-one
-    # questions = relationship('Questions', cascade="all,delete", backref='questions_tests', # todo: is required?
-    # uselist=False)  # one-to-one
-
-
 class QuestionsTests(db.Model):
     """
     Linking table between tests and questions
@@ -219,99 +228,139 @@ class ORM:
     Should automatically handle starting/finishing the session
     """
 
-    def __init__(self):
-        self.session = db.session
-        # POSTGRES_ADDRESS = self.get_postgres_address('posgres', 'qwerty987', 'admissionDB', 'localhost', 5432)
-        # self.engine = create_engine(POSTGRES_ADDRESS, client_encoding='utf8')
-        # self.session = self._get_session()
+    def __init__(self, db_instance: SQLAlchemy):
+        self.session = db_instance.session
 
     # ------------
     # SESSION
-    def get_postgres_address(user, password, db, host='localhost', port=5432):
-        """Returns a url to connect with PostgreSQL"""
-
-        # We connect with the help of the PostgreSQL URL
-        url = 'postgresql://{}:{}@{}:{}/{}'
-        url = url.format(user, password, host, port, db)
-        return url
-
-    def _get_session(self) -> Optional[Session]:
-        """Connects to database, and returns Session"""
-        try:
-            # self.engine = create_engine(POSTGRES_ADDRESS)
-            Session = scoped_session(sessionmaker(bind=self.engine))
-            self.session = Session()
-            return self.session
-        except Exception as excpt:
-            print(f'Can\'t connect to the database: {excpt}')
-
-    def open_session(self):
-        """Opens session"""
-        if not self.session:
-            self.session = self._get_session()
-        else:
-            print(f'Session for {self.engine} is already open')
-
-    def close_session(self):
-        """Closes session"""
-        self.session.commit()
-        self.session.close()
-        self.session = None
+    # def get_postgres_address(user, password, db, host='localhost', port=5432):
+    #     """Returns a url to connect with PostgreSQL"""
+    #
+    #     # We connect with the help of the PostgreSQL URL
+    #     url = 'postgresql://{}:{}@{}:{}/{}'
+    #     url = url.format(user, password, host, port, db)
+    #     return url
+    #
+    # def _get_session(self) -> Optional[Session]:
+    #     """Connects to database, and returns Session"""
+    #     try:
+    #         Session = scoped_session(sessionmaker(bind=self.engine))
+    #         self.session = Session()
+    #         return self.session
+    #     except Exception as excpt:
+    #         print(f'Can\'t connect to the database: {excpt}')
+    #
+    # def open_session(self):
+    #     """Opens session"""
+    #     if not self.session:
+    #         self.session = self._get_session()
+    #     else:
+    #         print(f'Session for {self.engine} is already open')
+    #
+    # def close_session(self):
+    #     """Closes session"""
+    #     self.session.commit()
+    #     self.session.close()
+    #     self.session = None
 
     # ------------
     # ADD
-    def add_candidate(self, first_name: str = None, last_name: str = None) -> Optional[int]:
+    def add_user(self, first_name: str = None, last_name: str = None,
+                 role: int = UsersRole.CANDIDATE) -> Optional[Users]:
         """
         Adds new candidate to the database
         """
+        if isinstance(role, UsersRole):
+            role = role.value
+
         try:
-            new_candidate = Users(first_name=first_name, last_name=last_name)
+            new_candidate = Users(first_name=first_name, last_name=last_name, role=role)
             self.session.add(new_candidate)
             self.session.commit()
-            return new_candidate.id
+
+            return new_candidate
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t add new candidate: {excpt}')
+
         return None
 
-    def add_candidates_info(self, candidate_id, nationaity: str = None, gender: bool = False,
-                            date_of_birth: Date = None,
-                            subscription_email: str = None, skype: str = None, phone: str = None) -> Optional[int]:
+    def add_token(self, token: str, token_type: str, user_id: int, created: Date = None,
+                  expires: Date = None, revoked: bool = False) -> Optional[int]:
+        if isinstance(token_type, TokenType):
+            token_type = token_type.value
+
+        if len(token) > 36:
+            decoded_token = decode_token(token)
+            token = decoded_token['jti']
+            if not expires:
+                expires = _epoch_utc_to_datetime(decoded_token['exp'])
+
+        try:
+            new_token = TokenBlacklist(jti=token, date=created, expires=expires, token_type=token_type,
+                                       user_id=user_id, revoked=revoked)
+            self.session.add(new_token)
+            self.session.commit()
+
+            return new_token
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add new token: {excpt}')
+
+        return None
+
+    def add_candidates_info(self, candidate_id: int,
+                            nationality: str = None, gender: bool = False,
+                            date_of_birth: Date = None) -> Optional[CandidatesInfo]:
         """
         Adds all necessary candidate's info
         :param candidate_id: id of the given candidate
-        :param nationaity: nationality
+        :param nationality: nationality
         :param gender: boolean value. False for male and true for female
         :param date_of_birth: datetime
-        :param subscription_email: email used for autorization
-        :param skype: skype username
-        :param phone: mobile phone of the user
         :return: id of the given candidate or None in case of error
         """
         try:
-            candidates_info = CandidatesInfo(candidate_id=candidate_id, nationaity=nationaity, gender=gender,
-                                             date_of_birth=date_of_birth,
-                                             subscription_email=subscription_email, skype=skype, phone=phone)
+            candidates_info = CandidatesInfo(candidate_id=candidate_id, nationaity=nationality,
+                                             gender=gender, date_of_birth=date_of_birth)
             self.session.add(candidates_info)
             self.session.commit()
-            return candidates_info.id
+
+            return candidates_info
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t add candidates info: {excpt}')
+
         return None
 
-    def add_candidates_autorization(self, email: str, id: int, password: str) -> Optional[int]:
+    def add_candidates_status(self, candidate_id: int,
+                              status: int = CandidateStatus.PENDING,
+                              admission_date: Date = None) -> Optional[CandidatesStatus]:
+        try:
+            candidates_status = CandidatesStatus(candidate_id=candidate_id, status=status,
+                                                 admission_date=admission_date)
+            self.session.add(candidates_status)
+            self.session.commit()
+
+            return candidates_status
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add candidates status: {excpt}')
+
+        return None
+
+    def add_candidates_authorization(self, email: str, u_id: int, password: str) -> Optional[int]:
         """
         Fill in all necessary fields for autorization
         :param email: candidates's email
-        :param id: candidate's id
+        :param u_id: candidate's id
         :param password: candidates's password
         :return: new or existing autorization instance or None in case of error
         """
         try:
             existing_candidates_autorization = self.session.query(UsersAutorization).filter_by(email=email).first()
             if not existing_candidates_autorization:
-                candidate_autorization = UsersAutorization(email=email, id=id, password=password)
+                candidate_autorization = UsersAutorization(email=email, id=u_id, password=password)
                 self.session.add(candidate_autorization)
                 self.session.commit()
                 return candidate_autorization
@@ -319,18 +368,16 @@ class ORM:
                 return existing_candidates_autorization
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t add candidates autorization: {excpt}')
+            print(f'Couldn\'t add candidates autorization: {excpt}')
         return None
 
-    def add_candidates_documents(self, id: int, cv: str = None, letter_of_recommendation: str = None,
-                                 motivation_letter: str = None, passport: str = None, photo: str = None,
-                                 project_description: str = None, transcript: str = None) -> Optional[int]:
+    def add_candidates_documents(self, u_id: int,
+                                 passport: str = None, photo: str = None,
+                                 project_description: str = None,
+                                 transcript: str = None) -> Optional[CandidatesDocuments]:
         """
         Add all necessary candidates documents (links to the files)
-        :param id: candidate's id
-        :param cv: link to the cv
-        :param letter_of_recommendation: link to the letter of recommendation
-        :param motivation_letter: link to the motivation letter
+        :param u_id: candidate's id
         :param passport: link to the scan of the passport
         :param photo: link to the photo of given candidate
         :param project_description: link to the project description
@@ -338,386 +385,432 @@ class ORM:
         :return: id of the given candidate or None in case of error
         """
         try:
-            candidates_documents = CandidatesDocuments(id=id, cv=cv, letter_of_recomendation=letter_of_recommendation,
-                                                       motivation_letter=motivation_letter, passport=passport,
+            candidates_documents = CandidatesDocuments(id=u_id, passport=passport,
                                                        photo=photo, project_description=project_description,
                                                        transcript=transcript)
             self.session.add(candidates_documents)
             self.session.commit()
-            return candidates_documents.id
+
+            return candidates_documents
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t add candidates documents: {excpt}')
+            print(f'Couldn\'t add candidates documents: {excpt}')
+
         return None
 
-    def add_candidates_tests(self, candidate_id: int, question_id: int, start_date: Date, end_date: Date, answer: str,
-                             points: str = None) -> Optional[int]:
+    # tests adding
+    def update_question(self, question: str, question_type: int, answer: [str],
+                        manually_grading: bool, points: float,
+                        test_id: int, question_id: int) -> Optional[int]:
         """
-        Add all question's data according to the given candidate
-        :param candidate_id: id of the candidate
-        :param question_id: id of the question
-        :param start_date: moment when the passing of test were started
-        :param end_date: moment when test should be closed
-        :param answer: answer of the given candidate
-        :param points: points earned for this question by given candidate
-        :return: id of the given candidates or None in case of error
+        Adds new question to the questions table. Also adds pair question_id, test_id to the question_tests linking
+        table.
+        :param question: the text of the question including answers to choose
+        :param question_type: type of question that maps to single choice, multiple choice and open question
+        :param answer: the right answer to this question. If it is open question this field will be empty
+        :param manually_grading: true for open questions
+        :param points: points that can be earn for this question
+        :param test_id: id of the test that includes this question
+        :return:
         """
         try:
-            existing_candidates_tests = self.session.query(CandidatesAnswers).filter_by(candidate_id=id,
-                                                                                        question_id=question_id).first()
-            if not existing_candidates_tests:
-                candidates_tests = CandidatesAnswers(id=candidate_id, question_id=question_id, answer=answer,
-                                                     points=None)
-                self.session.add(candidates_tests)
-                self.session.commit()
-                return candidates_tests.id
-            else:
-                # case of changing the answer
-                existing_candidates_tests.answer = answer
-                self.session.commit()
-                return existing_candidates_tests.id
+
+            new_question = self.session.query(Questions) \
+                .filter(Questions.id == question_id) \
+                .update({'question': question, 'question_type': question_type, 'answer': answer,
+                         'manually_grading': manually_grading,
+                         'points': points, 'test_id': test_id, })
+            self.session.flush()
+            return new_question.id
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t add candidates test: {excpt}')
+            print(f'Couldn\'t add question: {excpt}')
         return None
 
-    def add_token(self, id: str, jti: str) -> Optional[int]:
+    def add_question(self, question: str, question_type: int, answer: [str], manually_grading: bool, points: float,
+                     test_id: int) -> Optional[int]:
         """
-        Add new token to the database
-        :param id: id of new token
-        :param jti: jti token
-        :return: id of added token or None in case of error
+        Adds new question to the questions table. Also adds pair question_id, test_id to the question_tests linking
+        table.
+        :param question: the text of the question including answers to choose
+        :param question_type: type of question that maps to single choice, multiple choice and open question
+        :param answer: the right answer to this question. If it is open question this field will be empty
+        :param manually_grading: true for open questions
+        :param points: points that can be earn for this question
+        :param test_id: id of the test that includes this question
+        :return:
         """
         try:
-            new_token = RevokedToken(id=id, jti=jti, date=datetime.utcnow())
-            self.session.add(new_token)
+            new_question = Questions(question=question, question_type=question_type, answer=answer,
+                                     manually_grading=manually_grading, points=points)
+            self.session.add(new_question)
             self.session.commit()
-            return new_token.id
+            new_questions_tests = QuestionsTests(question_id=new_question.id, test_id=test_id)
+            self.session.add(new_questions_tests)
+            self.session.commit()
+            return new_question.id
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t add new token: {excpt}')
+            print(f'Couldn\'t add question: {excpt}')
+        return None
+
+    def add_answer(self, submission_id: int, question_id: int, answer: str) -> Optional[int]:
+        try:
+            new_answer = CandidatesAnswers(submission_id=submission_id, question_id=question_id, answer=answer)
+            self.session.add(new_answer)
+            self.session.commit()
+            return new_answer.id
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add test: {excpt}')
+        return None
+
+    def get_answers(self, submission_id) -> Optional[List[CandidatesAnswers]]:
+        try:
+            return self.session.query(CandidatesAnswers) \
+                .filter(CandidatesAnswers.submission_id == submission_id).all()
+
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get tests: {excpt}')
+
+        return None
+
+    def is_answer_exists(self, submission_id, question_id) -> Optional[bool]:
+        try:
+            answer = self.session.query(CandidatesAnswers) \
+                .filter(CandidatesAnswers.submission_id == submission_id) \
+                .filter(CandidatesAnswers.question_id == question_id).one()
+            if answer is not None:
+                return True
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get tests: {excpt}')
+
+        return False
+
+    def update_answer(self, submission_id: int, question_id: int,
+                      answer: str, grade: int, comments: str) -> Optional[int]:
+        try:
+            self.session.query(CandidatesAnswers) \
+                .filter(CandidatesAnswers.submission_id == submission_id).filter(
+                CandidatesAnswers.question_id == question_id) \
+                .update({'answer': answer, 'grade': grade, 'comments': comments})
+            self.session.flush()
+            self.session.commit()
+            return submission_id
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t change test: {excpt}')
+        return None
+
+    def add_test(self, test_name: str, max_time: int, archived: bool = False) -> Optional[int]:
+        try:
+            new_test = Tests(test_name=test_name, max_time=max_time, archived=archived)
+            self.session.add(new_test)
+            self.session.commit()
+            return new_test.id
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add test: {excpt}')
+        return None
+
+    def init_submission(self, candidate_id: BigInteger, test_id: BigInteger):
+        try:
+            new_submission = TestsSubmissions(candidate_id=candidate_id,
+                                              time_start=datetime.utcnow(), submitted=False,
+                                              test_id=test_id)
+
+            self.session.add(new_submission)
+            self.session.commit()
+
+            return new_submission
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add test: {excpt}')
+
+        return None
+
+    def update_submission(self, sub_id: int, submitted: bool, graded_by: int) -> Optional[int]:
+        try:
+            self.session.query(TestsSubmissions) \
+                .filter(TestsSubmissions.id == sub_id) \
+                .update({'submitted': submitted, 'graded_by': graded_by})
+            self.session.flush()
+            self.session.commit()
+            return sub_id
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t change test: {excpt}')
+        return None
+
+    def finish_submission(self, submission_id: int):
+        try:
+            self.session.query(TestsSubmissions) \
+                .filter(TestsSubmissions.id == submission_id) \
+                .update({'time_end': datetime.utcnow(), 'submitted': True})
+            self.session.flush()
+            self.session.commit()
+            return submission_id
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add test: {excpt}')
+
         return None
 
     # ------------
-    # GET
-    def get_candidate_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's instance by given id
-        :param id: id of the candidate
-        :return: candidate's instances or None if there is no such candidate
-        """
+    # PUT
+    def update_test(self, test_id: int, test_name: str, max_time: int, archived: bool = False) -> Optional[int]:
         try:
-            candidate = self.session.query(Users).get(id)
-            return candidate
+            self.session.query(Tests) \
+                .filter(Tests.id == test_id) \
+                .update({'test_name': test_name, 'max_time': max_time, 'archived': archived})
+            self.session.flush()
+            self.session.commit()
+
+            return test_id
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidate: {excpt}')
+            print(f'Could not change test: {excpt}')
+
         return None
 
-    def get_candidate_name_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's name by given id
-        :param id: id of the candidate
-        :return: candidate's name or None if there is no such candidate
-        """
+    def delete_test(self, test_id) -> Optional[bool]:
         try:
-            candidate = self.session.query(Users).get(id)
-            return candidate.first_name
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate name: {excpt}')
-        return None
-
-    def get_candidate_surname_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's surname by given id
-        :param id: id of the candidate
-        :return: candidate's surname or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(Users).get(id)
-            return candidate.last_name
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate surname: {excpt}')
-        return None
-
-    def get_candidate_info_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's info instance by given id
-        :param id: id of the candidate
-        :return: candidate's info instances or None if there is no such candidate
-        """
-        try:
-            candidate_info = self.session.query(CandidatesInfo).get(id)
-            return candidate_info
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates info: {excpt}')
-        return None
-
-    def get_candidate_nationality_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's nationality by given id
-        :param id: id of the candidate
-        :return: candidate's nationality or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            return candidate.nationality
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidate nationality: {excpt}')
-        return None
-
-    def get_candidate_gender_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's gender by given id. Converts it to the male or female instead of boolean value.
-        :param id: id of the candidate
-        :return: candidate's gender or None if there is no such candidate
-        """
-        try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            gender = candidate.gender
-            if gender == False:
-                return ('Male')
+            existing_test = self.session.query(Tests).filter(Tests.id == test_id).first()
+            if existing_test:
+                self.session.delete(existing_test)
+                self.session.commit()
+                return True
             else:
-                return ('Female')
+                return False
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidate gender: {excpt}')
+            print(f'Couldn\'t delete test: {excpt}')
+
         return None
 
-    def get_candidate_age_by_id(self, id: int) -> Optional[Users]:
+    def get_user(self, u_id: int) -> Optional[Users]:
         """
-        Get candidate's date of birth and calculates age
-        :param id: id of the candidate
-        :return: candidate's age or None if there is no such candidate
+        Get user's instance by given id
+        :param u_id: id of the user
+        :return: user's instances or None if there is no such candidate
         """
         try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            date_of_birth = candidate.date_of_birth
-            today = date.today()
-            return today.year - date_of_birth.year - (
-                    (today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+            user = self.session.query(Users).get(u_id)
+
+            return user
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidate nationality: {excpt}')
+            print(f'Could not get user: {excpt}')
+
         return None
 
-    def get_candidate_email_by_id(self, id: int) -> Optional[Users]:
+    def get_user_auth_by_email(self, email: str) -> Optional[UsersAutorization]:
         """
-        Get candidate's email by given id
-        :param id: id of the candidate
-        :return: candidate's email or None if there is no such candidate
+        :param email: email of the user
+        :return: user auth instance or None if there is no such candidate
         """
         try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            return candidate.email
+            user_auth = self.session.query(UsersAutorization).filter(UsersAutorization.email == email).first()
+
+            return user_auth
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidate email: {excpt}')
+            print(f'Couldn\'t get user: {excpt}')
+
         return None
 
-    def get_candidate_skype_by_id(self, id: int) -> Optional[Users]:
+    def get_token_by_jti(self, jti) -> Optional[TokenBlacklist]:
         """
-        Get candidate's skype by given id
-        :param id: id of the candidate
-        :return: candidate's skype or None if there is no such candidate
+        Get token's instance by given id
+        :param jti: id of the token
+        :return: token's instances or None if there is no such token
         """
         try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            return candidate.skype
+            token = self.session.query(TokenBlacklist).filter(TokenBlacklist.jti == jti).first()
+
+            return token
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidate skype: {excpt}')
+            print(f'Couldn\'t get token: {excpt}')
+
         return None
 
-    def get_candidate_phone_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get candidate's phone by given id
-        :param id: id of the candidate
-        :return: candidate's phone or None if there is no such candidate
-        """
+    def revoke_token_by_jti(self, jti: str) -> Optional[bool]:
         try:
-            candidate = self.session.query(CandidatesInfo).get(id)
-            return candidate.phone
+            res = self.session.query(TokenBlacklist).filter_by(jti=jti).update({'revoked': True})
+            self.session.flush()
+            self.session.commit()
+
+            return res
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidate nationality: {excpt}')
+            print(f'Couldn\'t get token: {excpt}')
+
+            return None
+
+    def get_test(self, t_id: int) -> Optional[Tests]:
+        """
+        Takes test instance from the database by test id
+        :param t_id: id of the test
+        :return: test instance from the database. Or None if test was not found
+        """
+        try:
+            test = self.session.query(Tests).get(t_id)
+            return test
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Could not get test: {excpt}')
         return None
 
-    def get_candidate_documents_by_id(self, id: int) -> Optional[Users]:
+    def get_tests(self) -> Optional[List[Tests]]:
         """
-        Get candidate's documents instance by given id
-        :param id: id of the candidate
-        :return: candidate's documents instances or None if there is no such candidate
+        Takes all tests instances from the database
+        :return: all test instances from the database.
         """
         try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents
+            tests = self.session.query(Tests).filter(Tests.archived == 'false').all()
+            return tests
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidates documents: {excpt}')
+            print(f'Couldn\'t get tests: {excpt}')
         return None
 
-    def get_candidate_cv_by_id(self, id: int) -> Optional[Users]:
+    def get_submission(self, sub_id) -> Optional[List[TestsSubmissions]]:
         """
-        Get link to candidate's cv by given id
-        :param id: id of the candidate
-        :return: candidate's cv or None if there is no such candidate
+        Takes all tests instances from the database
+        :return: all test instances from the database.
         """
         try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.cv
+            submission = self.session.query(TestsSubmissions).get(sub_id)
+            return submission
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidates cv: {excpt}')
+            print(f'Couldn\'t get tests: {excpt}')
         return None
 
-    def get_candidate_letter_of_recommendation_by_id(self, id: int) -> Optional[Users]:
+    def get_submissions(self, test_id) -> Optional[List[TestsSubmissions]]:
         """
-        Get link to candidate's letter of recomendation by given id
-        :param id: id of the candidate
-        :return: candidate's letter of recommendation or None if there is no such candidate
+        Takes all tests instances from the database
+        :return: all test instances from the database.
         """
         try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.letter_of_recomendation
+            submissions = self.session.query(TestsSubmissions).filter(TestsSubmissions.test_id == test_id).all()
+            return submissions
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidates letter of recomendation: {excpt}')
+            print(f'Couldn\'t get tests: {excpt}')
         return None
 
-    def get_candidate_motivation_letter_by_id(self, id: int) -> Optional[Users]:
+    def get_question(self, q_id: int) -> Optional[Questions]:
         """
-        Get link to candidate's motivation letter by given id
-        :param id: id of the candidate
-        :return: candidate's motivation letter or None if there is no such candidate
+        Takes the question instance from the database by the question id
+        :param q_id: id of the question
+        :return: question instance from the database or none if there is no such question
         """
         try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.motivation_letter
+            queston = self.session.query(Questions).get(q_id)
+
+            return queston
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidates motivation letter: {excpt}')
+            print(f'Could not get question: {excpt}')
+
         return None
 
-    def get_candidate_passport_by_id(self, id: int) -> Optional[Users]:
+    def get_questions_test(self, question_id: int) -> Optional[QuestionsTests]:
         """
-        Get link to candidate's passport by given id
-        :param id: id of the candidate
-        :return: candidate's passport or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.passport
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates passport: {excpt}')
-        return None
-
-    def get_candidate_photo_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's photo by given id
-        :param id: id of the candidate
-        :return: candidate's photo or None if there is no such candidate
+        Returns instance from the table that links questions and tests
+        :param question_id: id of the question to search appropriate test
+        :return: questions tests instance from the database
         """
         try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.photo
+            questions_tests = self.session.query(QuestionsTests).get(question_id)
+            return questions_tests
         except Exception as excpt:
             self.session.rollback()
-            print(f'Couldn\'t get candidates photo: {excpt}')
-        return None
-
-    def get_candidate_project_description_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's project description by given id
-        :param id: id of the candidate
-        :return: candidate's project description or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.project_description
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates project description: {excpt}')
-        return None
-
-    def get_candidate_transcript_by_id(self, id: int) -> Optional[Users]:
-        """
-        Get link to candidate's transcript by given id
-        :param id: id of the candidate
-        :return: candidate's transcript or None if there is no such candidate
-        """
-        try:
-            candidate_documents = self.session.query(CandidatesDocuments).get(id)
-            return candidate_documents.transcript
-        except Exception as excpt:
-            self.session.rollback()
-            print(f'Couldn\'t get candidates transcript: {excpt}')
+            print(f'Couldn\'t get question test link: {excpt}')
         return None
 
     # ------------
     # DELETE
 
-    def delete_token(self, id: int) -> Optional[int]:
+    def delete_token(self, tid: int) -> Optional[int]:
         """
         Deletes given token by id
-        :param id: id of the given token to delete
-        :return: True if token was delete successfully, False if token was not found, None in case of error
+        :param tid: id of the given token to delete
+        :return:
+            True if token was delete successfully,
+            False if token was not found,
+            None in case of error
         """
         try:
-            existing_token = self.session.query(RevokedToken).filter_by(id=id).first()
-            if existing_token:
-                self.session.delete(existing_token)
-                self.session.commit()
-                return True
-            else:
-                return False  # there is no such token
-
+            return self._remove_record(TokenBlacklist, tid)
         except Exception as excpt:
-            self.session.rollback()
-        print(f'Couldn\'t delete revoked token: {excpt}')
-        return None
+            print(f'Could not delete token: {excpt}')
 
-    def delete_candidate(self, id: int) -> Optional[int]:
+            return None
+
+    def delete_candidate(self, uid: int) -> Optional[int]:
         """
         This function will delete all candidates data including candidate's info, tests passed by candidate and etc
-        :param id: the id of the candidate
-        :return: True if candidate was delete successfully, False if candidate was not found, None in case of error
+        :param uid: the id of the candidate
+        :return:
+            True if candidate was delete successfully,
+            False if candidate was not found,
+            None in case of error
         """
         try:
-            existiing_candidate = self.session.query(Users).filter_by(id=id).first()
-            if existiing_candidate:
-                self.session.delete(existiing_candidate)
-                self.session.commit()
-                return True
-            else:
-                return False  # there is no such candidate
-
+            return self._remove_record(Users, uid)
         except Exception as excpt:
-            self.session.rollback()
-        print(f'Couldn\'t delete candidate: {excpt}')
-        return None
+            print(f'Could not delete candidate: {excpt}')
 
-    def delete_candidates_documents(self, id: int) -> Optional[int]:
+            return None
+
+    def delete_candidates_documents(self, uid: int) -> Optional[bool]:
         """
         Deletes all candidates' documents by given candidate's id
-        :param id: the id of the candidate
-        :return: True if candidate's documents were deleted successfully, False if candidate_documents were not found, None in case of error
+        :param uid: the id of the candidate
+        :return:
+            True if candidate's documents were deleted successfully,
+            False if candidate_documents were not found,
+            None in case of error
         """
         try:
-            existiing_candidates_documents = self.session.query(CandidatesDocuments).filter_by(id=id).first()
-            if existiing_candidates_documents:
-                self.session.delete(existiing_candidates_documents)
-                self.session.commit()
-                return True
-            else:
-                return False  # there is no such candidates documents
+            return self._remove_record(CandidatesDocuments, uid)
+        except Exception as excpt:
+            print(f'Could not delete candidate documents: {excpt}')
 
+            return None
+
+    def get_users(self, page_num: int, num_of_users: int) -> Optional[List[Users]]:
+        try:
+            return self.session.query(Users).paginate(page_num, num_of_users, False).items
         except Exception as excpt:
             self.session.rollback()
-        print(f'Couldn\'t delete candidate documents: {excpt}')
+            print(f'Couldn\'t get users: {excpt}')
+
         return None
+
+    def _remove_record(self, model, row_id) -> bool:
+        """
+        Deletes row for given model
+        :param model
+        :param row_id
+        :return:
+        """
+        try:
+            model = self.session.query(model).filter_by(id=row_id).first()
+            if model:
+                self.session.delete(model)
+                self.session.commit()
+
+                return True
+            else:
+                return False
+
+        except Exception:
+            self.session.rollback()
+
+            raise

@@ -1,15 +1,15 @@
 from collections import OrderedDict
 
 import yaml
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec_webframeworks.flask import FlaskPlugin
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
-from apispec import APISpec
-from apispec.ext.marshmallow import MarshmallowPlugin
-from apispec_webframeworks.flask import FlaskPlugin
 
 from backend.config.main import OPENAPI_META
 from backend.core.errors import error_descriptions
@@ -21,6 +21,8 @@ except ImportError:
 
 
 class FormsBackend(object):
+    orm = None
+
     def __init__(self, flask_app):
         self.app = flask_app
         self.app.config.from_object(Config)
@@ -34,6 +36,9 @@ class FormsBackend(object):
         self.spec = self._init_api_spec()
 
     def init(self):
+        from backend.core.models import ORM
+        self.orm = ORM(self.db)
+
         self._add_routes(self._get_routes())
 
     def _get_routes(self):
@@ -48,6 +53,12 @@ class FormsBackend(object):
             'profile': {
                 '': profile.UserProfile,
                 'register': profile.UserRegistration,
+                'list': {
+                    '<int:page>': {
+                        '': profile.UsersList
+                    },
+                }
+
             },
             'tests': {
                 '<int:test_id>': {
@@ -56,6 +67,7 @@ class FormsBackend(object):
                     'submissions': test.TestSubmissions,
                 },
                 'list': test.TestsList,
+                'create': test.TestCreation,
             },
             'submissions': {
                 '<int:submission_id>': {
