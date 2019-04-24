@@ -53,16 +53,21 @@ class UserLogin(Resource):
         if not argon2.verify(password, user_auth.password):
             return fail_response('Bad email or password', 406)
 
-        access_token = create_access_token(identity=email)
-        refresh_token = create_refresh_token(identity=email)
+        try:
+            access_token = create_access_token(identity=email)
+            refresh_token = create_refresh_token(identity=email)
 
-        ORM.add_token(jti=access_token, token_type=TokenType.ACCESS, user_id=user_auth.id)
-        ORM.add_token(jti=refresh_token, token_type=TokenType.REFRESH, user_id=user_auth.id)
+            ORM.add_token(token=access_token, token_type=TokenType.ACCESS, user_id=user_auth.id)
+            ORM.add_token(token=refresh_token, token_type=TokenType.REFRESH, user_id=user_auth.id)
 
-        return TokensSchema().dump({
-            'access_token': access_token,
-            'refresh_token': refresh_token,
-        })
+            return TokensSchema().dump({
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+            })
+        except Exception as expt:
+            print(f"Auth error: {expt}")
+
+            return fail_response(code=500)
 
 
 class UserLogout(Resource):

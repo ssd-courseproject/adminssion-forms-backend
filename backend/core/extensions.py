@@ -8,9 +8,15 @@ def application_extend(application: FormsBackend):
 
     @application.jwt.token_in_blacklist_loader
     def check_if_token_in_blacklist(decrypted_token):
+        jti = decrypted_token['jti']
+
+        model = application.orm.get_token_by_jti(jti)
+        if not model:
+            return False
+        if model.revoked:
+            return True
+
         return False
-        # jti = decrypted_token['jti']
-        # return RevokedTokenModel.is_jti_blacklisted(jti)
 
     @application.jwt.user_loader_callback_loader
     def fetch_user(identity) -> Users:

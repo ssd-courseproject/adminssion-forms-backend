@@ -1,30 +1,32 @@
 from datetime import date, datetime
 from typing import List, Optional
 
+from flask_jwt_extended import decode_token
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Date, Boolean, Text, BigInteger, ForeignKey, Numeric, ARRAY, Integer
-from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
+from sqlalchemy import Column, Date, Boolean, Text, BigInteger, ForeignKey, Numeric, ARRAY, Integer, String, DateTime
+from sqlalchemy.orm import relationship
 
 from backend.core.enums import UsersRole, CandidateStatus, TokenType
+from backend.helpers import _epoch_utc_to_datetime
 from server import application
 
 db = application.db
 
 
-class RevokedToken(db.Model):
+class TokenBlacklist(db.Model):
     """
-    Storage of the token required for authentification
+    Storage of the token required for authentication
     """
-    __tablename__ = 'revoked_tokens'
+    __tablename__ = 'token_blacklist'
     __table_args__ = {'extend_existing': True}
 
     id = Column(BigInteger, primary_key=True)
-    jti = Column(Text())
-    date = Column(Date)
-    expires = Column(Date)
-    revoked = Column(Boolean, default=False)
-    token_type = Column(Text)
-    user_id = Column(BigInteger)
+    jti = Column(String(36), index=True, unique=True, nullable=False)
+    date = Column(DateTime, default=datetime.utcnow(), nullable=False)
+    expires = Column(DateTime, nullable=False)
+    revoked = Column(Boolean, default=False, nullable=False)
+    token_type = Column(Text, nullable=False)
+    user_id = Column(BigInteger, index=True, nullable=False)
 
 
 class Users(db.Model):
@@ -283,14 +285,20 @@ class ORM:
 
         return None
 
-    def add_token(self, jti: str, token_type: str, user_id: int, created: Date = datetime.utcnow(),
+    def add_token(self, token: str, token_type: str, user_id: int, created: Date = None,
                   expires: Date = None, revoked: bool = False) -> Optional[int]:
         if isinstance(token_type, TokenType):
             token_type = token_type.value
 
+        if len(token) > 36:
+            decoded_token = decode_token(token)
+            token = decoded_token['jti']
+            if not expires:
+                expires = _epoch_utc_to_datetime(decoded_token['exp'])
+
         try:
-            new_token = RevokedToken(jti=jti, date=created, expires=expires, token_type=token_type,
-                                     user_id=user_id, revoked=revoked)
+            new_token = TokenBlacklist(jti=token, date=created, expires=expires, token_type=token_type,
+                                       user_id=user_id, revoked=revoked)
             self.session.add(new_token)
             self.session.commit()
 
@@ -600,18 +608,20 @@ class ORM:
 
         return None
 
-    def get_token(self, t_id) -> Optional[RevokedToken]:
+    def get_token_by_jti(self, jti) -> Optional[TokenBlacklist]:
         """
         Get token's instance by given id
-        :param t_id: id of the token
+        :param jti: id of the token
         :return: token's instances or None if there is no such token
         """
         try:
-            token = self.session.query(RevokedToken).get(t_id)
+            token = self.session.query(TokenBlacklist).filter(TokenBlacklist.jti == jti).first()
+
             return token
         except Exception as excpt:
             self.session.rollback()
             print(f'Couldn\'t get token: {excpt}')
+
         return None
 
     def get_test(self, t_id: int) -> Optional[Tests]:
@@ -710,7 +720,7 @@ class ORM:
             None in case of error
         """
         try:
-            return self._remove_record(RevokedToken, tid)
+            return self._remove_record(TokenBlacklist, tid)
         except Exception as excpt:
             print(f'Could not delete token: {excpt}')
 

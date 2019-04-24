@@ -1,4 +1,16 @@
 error_descriptions = {
+    'NoAuthorizationError': {
+        'message': ["Authorization token not provided."],
+        'status': 401,
+    },
+    'InsufficientRights': {
+        'message': ["You have insufficient rights fot this action"],
+        'status': 403
+    },
+    'MethodNotAllowed': {
+        'message': ["The method is not allowed for the requested URL."],
+        'status': 405,
+    },
     'ResourceDoesNotExist': {
         'message': ["A resource with that ID no longer exists."],
         'status': 410,
@@ -7,18 +19,10 @@ error_descriptions = {
         'message': ["Your token is expired."],
         'status': 419,
     },
-    'NoAuthorizationError': {
-        'message': ["Authorization token not provided."],
-        'status': 401,
+    'RevokedTokenError': {
+        'message': ["Your token has been revoked."],
+        'status': 420,
     },
-    'MethodNotAllowed': {
-        'message': ["The method is not allowed for the requested URL."],
-        'status': 405,
-    },
-    'InsufficientRights': {
-        'message': ["You have insufficient rights fot this action"],
-        'status': 403
-    }
 }
 
 
