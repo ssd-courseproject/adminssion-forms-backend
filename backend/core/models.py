@@ -488,6 +488,7 @@ class ORM:
             print(f'Couldn\'t get tests: {excpt}')
 
         return False
+
     def update_answer(self, submission_id: int, question_id: int,
                       answer: str, grade: int, comments: str) -> Optional[int]:
         try:
