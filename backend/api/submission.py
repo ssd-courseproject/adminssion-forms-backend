@@ -39,7 +39,7 @@ class SubmissionsManagement(Resource):
         submission = application.orm.get_submission(submission_id)
         submission_schema = TestsSubmissionsSchema()
         if submission is None:
-            return fail_response("Test is not found", code=404)
+            return fail_response("Submission is not found", code=404)
         res = submission_schema.dump(submission)
         answers = application.orm.get_answers(res.data['id'])
         json_answers = []
@@ -85,8 +85,10 @@ class SubmissionCheckpoint(Resource):
             res = application.orm.add_answer(submission_id=submission_id, question_id=answer.question_id,
                                              answer=answer.answer)
             if res is None:
-                application.orm.update_answer(submission_id=submission_id, question_id=answer.question_id,
-                                              answer=answer.answer, grade=answer.grade, comments=answer.comments)
+                res = application.orm.update_answer(submission_id=submission_id, question_id=answer.question_id,
+                                                    answer=answer.answer, grade=answer.grade, comments=answer.comments)
+                if res is None:
+                    return fail_response("submission not found", code=404)
         return success_response(msg="Answers saved")
 
 
@@ -122,5 +124,7 @@ class SubmissionComplete(Resource):
                           message: [Test not found]
 
         """
-        test_id = application.orm.finish_submission(submission_id=submission_id)
+        submission_id = application.orm.finish_submission(submission_id=submission_id)
+        if submission_id is None:
+            return fail_response(msg="submission not found", code=404)
         return generic_response(status='Created', msg="Submission completed", code=201)
