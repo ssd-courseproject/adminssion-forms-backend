@@ -1,4 +1,5 @@
 from flask import jsonify
+from flask_jwt_extended import jwt_required
 from flask_restful import Resource
 from marshmallow import fields
 from webargs.flaskparser import use_kwargs, use_args
@@ -9,6 +10,7 @@ from server import application
 
 
 class SubmissionsManagement(Resource):
+    @jwt_required
     def get(self, submission_id):
         """
         ---
@@ -34,12 +36,12 @@ class SubmissionsManagement(Resource):
                     application/json:
                         schema: ErrorSchema
                         example:
-                          message: [Test not found]
+                          message: [Submission not found]
         """
         submission = application.orm.get_submission(submission_id)
         submission_schema = TestsSubmissionsSchema()
         if submission is None:
-            return fail_response("Test is not found", code=404)
+            return fail_response("Submission is not found", code=404)
         res = submission_schema.dump(submission)
         answers = application.orm.get_answers(res.data['id'])
         json_answers = []
@@ -51,6 +53,7 @@ class SubmissionsManagement(Resource):
 
 
 class SubmissionCheckpoint(Resource):
+    @jwt_required
     @use_kwargs({"submissions_id": fields.Int(location="query")})
     @use_args(TestsSubmissionWithAnswersSchema(), locations=("json",))
     def put(self, args, submission_id):
@@ -82,15 +85,17 @@ class SubmissionCheckpoint(Resource):
 
         """
         for answer in args['answers']:
-            res = application.orm.add_answer(submission_id=submission_id, question_id=answer.question_id,
-                                             answer=answer.answer)
-            if res is None:
+            if application.orm.is_answer_exists(submission_id, answer.question_id):
                 application.orm.update_answer(submission_id=submission_id, question_id=answer.question_id,
                                               answer=answer.answer, grade=answer.grade, comments=answer.comments)
+            else:
+                application.orm.add_answer(submission_id=submission_id, question_id=answer.question_id,
+                                           answer=answer.answer)
         return success_response(msg="Answers saved")
 
 
 class SubmissionComplete(Resource):
+    @jwt_required
     @use_kwargs({"submissions_id": fields.Int(location="query")})
     def post(self, submission_id):
         """
@@ -119,8 +124,12 @@ class SubmissionComplete(Resource):
                     application/json:
                         schema: ErrorSchema
                         example:
-                          message: [Test not found]
+                          message: [Submission not found]
 
         """
-        test_id = application.orm.finish_submission(submission_id=submission_id)
+        found_submission_id = application.orm.get_submission(submission_id)
+        if found_submission_id is None:
+            return fail_response(msg="Submission not found", code=404)
+        application.orm.finish_submission(submission_id=submission_id)
+
         return generic_response(status='Created', msg="Submission completed", code=201)

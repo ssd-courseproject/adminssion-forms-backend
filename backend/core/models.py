@@ -1,9 +1,9 @@
-from datetime import date, datetime
+from datetime import datetime
 from typing import List, Optional
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Date, Boolean, Text, BigInteger, ForeignKey, Numeric, ARRAY, Integer
-from sqlalchemy.orm import relationship, sessionmaker, Session, scoped_session
+from sqlalchemy.orm import relationship
 
 from backend.core.enums import UsersRole, CandidateStatus, TokenType
 from server import application
@@ -468,6 +468,18 @@ class ORM:
 
         return None
 
+    def is_answer_exists(self, submission_id, question_id) -> Optional[bool]:
+        try:
+            answer = self.session.query(CandidatesAnswers) \
+                .filter(CandidatesAnswers.submission_id == submission_id) \
+                .filter(CandidatesAnswers.question_id == question_id).one()
+            if answer is not None:
+                return True
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t get tests: {excpt}')
+
+        return False
     def update_answer(self, submission_id: int, question_id: int,
                       answer: str, grade: int, comments: str) -> Optional[int]:
         try:
