@@ -780,7 +780,6 @@ class ORM:
 
         return None
 
-
     def _remove_record(self, model, row_id) -> bool:
         """
         Deletes row for given model

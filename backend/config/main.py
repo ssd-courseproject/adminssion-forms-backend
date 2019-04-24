@@ -5,7 +5,7 @@ class Config(object):
     PROPAGATE_EXCEPTIONS = False
 
     SECRET_KEY = 'some-secret-string'
-    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:ssd_project@35.243.196.1/admission_db'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///app.db'
     JWT_SECRET_KEY = 'jwt-secret-string'
 
     STATIC_URL_PATH = '/static'
