@@ -145,7 +145,7 @@ class Tests(db.Model):
 
     id = Column(BigInteger, primary_key=True)
     test_name = Column(Text)
-    max_time = Column(Date)
+    max_time = Column(Integer)
     archived = Column(Boolean)
 
     questions_tests = relationship('QuestionsTests', cascade="all,delete", backref='tests',
