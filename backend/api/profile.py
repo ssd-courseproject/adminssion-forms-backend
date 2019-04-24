@@ -1,4 +1,3 @@
-from flask import jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restful import Resource
 from webargs.flaskparser import use_args
@@ -54,9 +53,9 @@ class UserRegistration(Resource):
             return fail_response('User with such email already exists', code=409)
 
         user = ORM.add_user(first_name=args["name"], last_name=args["surname"])
-        ORM.add_candidates_autorization(id=user.id, email=args["email"], password=argon2.hash(args["password"]))
+        ORM.add_candidates_authorization(u_id=user.id, email=args["email"], password=argon2.hash(args["password"]))
 
-        ORM.add_candidates_documents(id=user.id)
+        ORM.add_candidates_documents(u_id=user.id)
         ORM.add_candidates_info(candidate_id=user.id)
 
         return generic_response(201)
@@ -97,3 +96,33 @@ class UserProfile(Resource):
         description: Updates user profile data
         """
         return success_response()
+
+
+class UsersList(Resource):
+    @jwt_required
+    def get(self):
+        """
+        ---
+        summary: Users list
+        description: List of all users with pagination, filtering and sorting
+        responses:
+          200:
+            description: OK
+            content:
+              application/json:
+                schema: ProfileInfoSchema
+                many: true
+                example:
+                    - $ref: '#/components/examples/ProfileFull'
+                    - $ref: '#/components/examples/ProfileFull'
+        """
+        current_user = get_jwt_identity()
+
+        return success_response([{
+            'email': current_user,
+            'name': 'Sergey',
+            'surname': 'Malyutkin',
+            'natinality': 'RU',
+            'gender': 'MALE',
+            'date_of_birth': '1970-01-01',
+        }])
