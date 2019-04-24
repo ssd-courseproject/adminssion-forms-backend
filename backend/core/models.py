@@ -606,6 +606,54 @@ class ORM:
 
         return None
 
+    def get_document(self, doc_id: int) -> Optional[Users]:
+        """
+        Get user's instance by given id
+        :param u_id: id of the user
+        :return: user's instances or None if there is no such candidate
+        """
+        try:
+            doc = self.session.query(CandidatesDocuments).get(doc_id)
+
+            return doc
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Could not get doc: {excpt}')
+
+        return None
+
+    def get_info(self, id: int) -> Optional[Users]:
+        """
+        Get user's instance by given id
+        :param u_id: id of the user
+        :return: user's instances or None if there is no such candidate
+        """
+        try:
+            info = self.session.query(CandidatesInfo).get(id)
+
+            return info
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Could not get uinfo: {excpt}')
+
+        return None
+
+    def get_status(self, id: int) -> Optional[Users]:
+        """
+        Get user's instance by given id
+        :param u_id: id of the user
+        :return: user's instances or None if there is no such candidate
+        """
+        try:
+            status = self.session.query(CandidatesStatus).get(id)
+
+            return status
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Could not get status: {excpt}')
+
+        return None
+
     def get_user_auth_by_email(self, email: str) -> Optional[UsersAutorization]:
         """
         :param email: email of the user

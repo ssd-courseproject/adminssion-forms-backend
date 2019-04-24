@@ -5,7 +5,8 @@ from passlib.hash import argon2
 from validate_email import validate_email
 from webargs.flaskparser import use_args
 
-from backend.core.schema import RegistrationSchema, UsersSchema
+from backend.core.schema import RegistrationSchema, UsersSchema, CandidatesDocumentsSchema, CandidatesInfoSchema, \
+    CandidatesStatusSchema
 from backend.helpers import success_response, fail_response, generic_response
 from server import application
 
@@ -64,8 +65,7 @@ class UserRegistration(Resource):
 
 
 class UserProfile(Resource):
-    @jwt_required
-    def get(self):
+    def get(self, u_id):
         """
         ---
         summary: Profile info
@@ -81,14 +81,21 @@ class UserProfile(Resource):
         """
         current_user = get_jwt_identity()
 
-        return success_response(
-            email=current_user,
-            name='Sergey',
-            surname='Malyutkin',
-            natinality='RU',
-            gender=1,
-            date_of_birth='1970-01-01',
-        )
+        user = application.orm.get_user(u_id)
+        documents = application.orm.get_document(u_id)
+        info = application.orm.get_info(u_id)
+        status = application.orm.get_status(u_id)
+        user_schema = UsersSchema()
+        docs_schema = CandidatesDocumentsSchema()
+        info_schema = CandidatesInfoSchema()
+        status_schema = CandidatesStatusSchema()
+
+        profile = dict()
+        profile.update({'user': user_schema.dump(user)})
+        profile.update({'document': docs_schema.dump(documents)})
+        profile.update({'status': info_schema.dump(status)})
+        profile.update({'info': status_schema.dump(info)})
+        return jsonify(profile)
 
     @jwt_required
     def put(self):
