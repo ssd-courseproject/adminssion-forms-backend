@@ -20,7 +20,7 @@ def application_extend(application: FormsBackend):
 
     @application.jwt.user_loader_callback_loader
     def fetch_user(identity) -> Users:
-        return application.orm.get_user_auth_by_email(identity)
+        return application.orm.get_user_auth_by_email(identity).user
 
     @application.app.errorhandler(422)
     def handle_error(err):

@@ -57,7 +57,7 @@ class TestsList(Resource):
 
         """
         user: Users = get_current_user()
-        if user.user.role == enums.UsersRole.MANAGER or user.user.role == enums.UsersRole.STAFF:
+        if user.role == enums.UsersRole.MANAGER or user.role == enums.UsersRole.STAFF:
             return fail_response(msg="You are not allowed to create test", code=406)
         tests = application.orm.get_tests()
         if tests is None:
