@@ -1,11 +1,13 @@
 from flask.json import jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_current_user
 from flask_restful import Resource
 from passlib.hash import argon2
 from validate_email import validate_email
 from webargs.flaskparser import use_args
 
-from backend.core.schema import RegistrationSchema, UsersSchema
+from backend.core.models import Users
+from backend.core.schema import RegistrationSchema, UsersSchema, CandidatesDocumentsSchema, CandidatesInfoSchema, \
+    CandidatesStatusSchema
 from backend.helpers import success_response, fail_response, generic_response
 from server import application
 
@@ -64,8 +66,7 @@ class UserRegistration(Resource):
 
 
 class UserProfile(Resource):
-    @jwt_required
-    def get(self):
+    def get(self, u_id):
         """
         ---
         summary: Profile info
@@ -79,16 +80,7 @@ class UserProfile(Resource):
                 example:
                     $ref: '#/components/examples/ProfileFull'
         """
-        current_user = get_jwt_identity()
-
-        return success_response(
-            email=current_user,
-            name='Sergey',
-            surname='Malyutkin',
-            natinality='RU',
-            gender=1,
-            date_of_birth='1970-01-01',
-        )
+        return ProfileRetreiver.get_profile(u_id)
 
     @jwt_required
     def put(self):
@@ -98,6 +90,35 @@ class UserProfile(Resource):
         description: Updates user profile data
         """
         return success_response()
+
+
+class CurrentUserProfile(Resource):
+    def get(self):
+        user: Users = get_current_user()
+        return ProfileRetreiver.get_profile(user.id)
+
+
+class ProfileRetreiver(object):
+
+    @staticmethod
+    def get_profile(u_id):
+        user = application.orm.get_user(u_id)
+        if user is None:
+            return fail_response(msg="user not found", code=404)
+        documents = application.orm.get_document(u_id)
+        info = application.orm.get_info(u_id)
+        status = application.orm.get_status(u_id)
+        user_schema = UsersSchema()
+        docs_schema = CandidatesDocumentsSchema()
+        info_schema = CandidatesInfoSchema()
+        status_schema = CandidatesStatusSchema()
+
+        profile = dict()
+        profile.update({'user': user_schema.dump(user).data})
+        profile.update({'document': docs_schema.dump(documents).data})
+        profile.update({'status': info_schema.dump(status).data})
+        profile.update({'info': status_schema.dump(info).data})
+        return jsonify(profile)
 
 
 class UsersList(Resource):

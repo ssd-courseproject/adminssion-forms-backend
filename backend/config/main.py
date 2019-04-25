@@ -5,14 +5,14 @@ class Config(object):
     PROPAGATE_EXCEPTIONS = False
 
     SECRET_KEY = 'some-secret-string'
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///app.db'
+    SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:ssd_project@35.243.196.1/admission_db'
     JWT_SECRET_KEY = 'jwt-secret-string'
 
     STATIC_URL_PATH = '/static'
     STATIC_FOLDER = 'public'
 
 
-API_VERSION_NUMBER = '0.0.5'
+API_VERSION_NUMBER = '0.0.6'
 API_VERSION_LABEL = 'v1'
 
 OPENAPI_META = """

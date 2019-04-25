@@ -321,7 +321,7 @@ class ORM:
         :return: id of the given candidate or None in case of error
         """
         try:
-            candidates_info = CandidatesInfo(candidate_id=candidate_id, nationaity=nationality,
+            candidates_info = CandidatesInfo(id=candidate_id, nationaity=nationality,
                                              gender=gender, date_of_birth=date_of_birth)
             self.session.add(candidates_info)
             self.session.commit()
@@ -603,6 +603,54 @@ class ORM:
         except Exception as excpt:
             self.session.rollback()
             print(f'Could not get user: {excpt}')
+
+        return None
+
+    def get_document(self, doc_id: int) -> Optional[Users]:
+        """
+        Get user's instance by given id
+        :param u_id: id of the user
+        :return: user's instances or None if there is no such candidate
+        """
+        try:
+            doc = self.session.query(CandidatesDocuments).get(doc_id)
+
+            return doc
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Could not get doc: {excpt}')
+
+        return None
+
+    def get_info(self, id: int) -> Optional[Users]:
+        """
+        Get user's instance by given id
+        :param u_id: id of the user
+        :return: user's instances or None if there is no such candidate
+        """
+        try:
+            info = self.session.query(CandidatesInfo).get(id)
+
+            return info
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Could not get uinfo: {excpt}')
+
+        return None
+
+    def get_status(self, id: int) -> Optional[Users]:
+        """
+        Get user's instance by given id
+        :param u_id: id of the user
+        :return: user's instances or None if there is no such candidate
+        """
+        try:
+            status = self.session.query(CandidatesStatus).get(id)
+
+            return status
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Could not get status: {excpt}')
 
         return None
 
