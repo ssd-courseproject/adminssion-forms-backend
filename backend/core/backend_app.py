@@ -51,7 +51,10 @@ class FormsBackend(object):
                 'refresh': auth.TokenRefresh,
             },
             'profile': {
-                '': profile.UserProfile,
+                '': profile.CurrentUserProfile,
+                '<int:u_id>': {
+                    '': profile.UserProfile,
+                },
                 'register': profile.UserRegistration,
                 'list': {
                     '<int:page>': {
