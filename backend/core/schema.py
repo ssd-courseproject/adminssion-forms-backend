@@ -122,6 +122,11 @@ class TokensSchema(Schema):
     refresh_token = fields.Str()
 
 
+class HostSchema(Schema):
+    host = fields.Str()
+    host_full = fields.Str()
+
+
 ######
 # Complex schemas
 ######

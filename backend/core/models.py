@@ -222,6 +222,22 @@ class QuestionsTests(db.Model):
     test_id = Column(BigInteger, ForeignKey(Tests.id))
 
 
+class RequestLog(db.Model):
+    """
+    Linking table between tests and questions
+    """
+    __tablename__ = 'request_log'
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(BigInteger, primary_key=True)
+    user_id = Column(BigInteger)
+    role = Column(BigInteger)
+    method = Column(Text)
+    path = Column(Text)
+    data = Column(Text)
+    date = Column(DateTime, default=datetime.utcnow)
+
+
 class ORM:
     """
     Supports AddOrUpdate and Remove operations for all the non-associative tables
@@ -453,6 +469,19 @@ class ORM:
             self.session.rollback()
             print(f'Couldn\'t add question: {excpt}')
         return None
+
+    def add_log(self, user_id, role, method, path, data):
+        try:
+            model = RequestLog(user_id=user_id, role=role, method=method, path=path, data=data)
+            self.session.add(model)
+            self.session.commit()
+            return model.id
+        except Exception as excpt:
+            self.session.rollback()
+            print(f'Couldn\'t add log record: {excpt}')
+
+        return None
+
 
     def add_answer(self, submission_id: int, question_id: int, answer: str) -> Optional[int]:
         try:

@@ -12,7 +12,7 @@ class Config(object):
     STATIC_FOLDER = 'public'
 
 
-API_VERSION_NUMBER = '0.0.6'
+API_VERSION_NUMBER = '0.0.7'
 API_VERSION_LABEL = 'v1'
 
 OPENAPI_META = """
@@ -26,6 +26,7 @@ OPENAPI_META = """
         - name: Profile
         - name: Tests
         - name: Submissions
+        - name: Service
     servers:
         - url: /
     components:

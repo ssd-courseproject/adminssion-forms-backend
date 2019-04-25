@@ -42,7 +42,7 @@ class FormsBackend(object):
         self._add_routes(self._get_routes())
 
     def _get_routes(self):
-        from backend.api import auth, profile, test, submission
+        from backend.api import auth, profile, test, submission, service
 
         return {
             'auth': {
@@ -61,7 +61,6 @@ class FormsBackend(object):
                         '': profile.UsersList
                     },
                 }
-
             },
             'tests': {
                 '<int:test_id>': {
@@ -78,7 +77,11 @@ class FormsBackend(object):
                     'checkpoint': submission.SubmissionCheckpoint,
                     'complete': submission.SubmissionComplete,
                 },
-            }
+            },
+            'service': {
+                'test': service.ServiceStatus,
+                'host': service.CurrentServer,
+            },
         }
 
     def _init_api_spec(self):

@@ -4,8 +4,8 @@ from flask_restful import Resource
 from marshmallow import fields
 from webargs.flaskparser import use_kwargs, use_args
 
-from backend.core import enums
-from backend.core.decorators import candidate_role_required
+from backend.core.enums import UsersRole
+from backend.core.decorators import candidate_role_required, manager_role_required
 from backend.core.models import Users
 from backend.core.schema import TestsRegistrationSchema, TestsSchema, TestsSubmissionsSchema, QuestionsSchema
 from backend.helpers import fail_response, generic_response, success_response
@@ -57,7 +57,7 @@ class TestsList(Resource):
 
         """
         user: Users = get_current_user()
-        if user.user.role == enums.UsersRole.MANAGER or user.user.role == enums.UsersRole.STAFF:
+        if user.role == UsersRole.MANAGER or user.role == UsersRole.STAFF:
             return fail_response(msg="You are not allowed to create test", code=406)
         tests = application.orm.get_tests()
         if tests is None:
@@ -178,6 +178,7 @@ class TestManagement(Resource):
         return jsonify(res.data)
 
     @jwt_required
+    @manager_role_required
     @use_kwargs({"test_id": fields.Int(location="query")})
     @use_args(TestsRegistrationSchema())
     def put(self, args, test_id):
@@ -236,6 +237,7 @@ class TestManagement(Resource):
         return generic_response(status='Success', msg="Test changed", code=201)
 
     @jwt_required
+    @manager_role_required
     def delete(self, test_id):
         """
         ---

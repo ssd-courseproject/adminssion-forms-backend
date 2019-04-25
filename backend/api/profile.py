@@ -5,6 +5,7 @@ from passlib.hash import argon2
 from validate_email import validate_email
 from webargs.flaskparser import use_args
 
+from backend.core.decorators import university_staff_only
 from backend.core.models import Users
 from backend.core.schema import RegistrationSchema, UsersSchema, CandidatesDocumentsSchema, CandidatesInfoSchema, \
     CandidatesStatusSchema
@@ -66,11 +67,13 @@ class UserRegistration(Resource):
 
 
 class UserProfile(Resource):
+    @jwt_required
+    @university_staff_only
     def get(self, u_id):
         """
         ---
         summary: Profile info
-        description: All information about current user's profile
+        description: All information about some user's profile
         responses:
           200:
             description: OK
@@ -93,8 +96,23 @@ class UserProfile(Resource):
 
 
 class CurrentUserProfile(Resource):
+    @jwt_required
     def get(self):
+        """
+        ---
+        summary: Current profile info
+        description: All information about current user's profile
+        responses:
+          200:
+            description: OK
+            content:
+              application/json:
+                schema: ProfileInfoSchema
+                example:
+                    $ref: '#/components/examples/ProfileFull'
+        """
         user: Users = get_current_user()
+
         return ProfileRetreiver.get_profile(user.id)
 
 
@@ -118,10 +136,13 @@ class ProfileRetreiver(object):
         profile.update({'document': docs_schema.dump(documents).data})
         profile.update({'status': info_schema.dump(status).data})
         profile.update({'info': status_schema.dump(info).data})
+
         return jsonify(profile)
 
 
 class UsersList(Resource):
+    @jwt_required
+    @university_staff_only
     def get(self, page=1):
         """
         ---

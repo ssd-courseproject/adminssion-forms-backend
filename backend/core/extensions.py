@@ -1,10 +1,13 @@
 from flask import jsonify
+from flask_jwt_extended import jwt_required, jwt_optional
 
 from backend.core.backend_app import FormsBackend
 
 
 def application_extend(application: FormsBackend):
     from backend.core.models import Users
+    from backend.core.enums import UsersRole
+    from flask_jwt_extended import get_current_user
 
     @application.jwt.token_in_blacklist_loader
     def check_if_token_in_blacklist(decrypted_token):
@@ -20,7 +23,25 @@ def application_extend(application: FormsBackend):
 
     @application.jwt.user_loader_callback_loader
     def fetch_user(identity) -> Users:
-        return application.orm.get_user_auth_by_email(identity)
+        user_auth = application.orm.get_user_auth_by_email(identity)
+
+        return user_auth.user
+
+    @application.app.before_request
+    @jwt_optional
+    def log_request():
+        from flask import request
+
+        user: Users = get_current_user()
+        if user is not None:
+            roles = [UsersRole.MANAGER, UsersRole.STAFF]
+
+            if user.role == roles[0].value or user.role == roles[1].value:
+                method = request.method
+                path = request.path
+                data = request.get_json()
+
+                application.orm.add_log(user.id, user.role, method, path, data)
 
     @application.app.errorhandler(422)
     def handle_error(err):
