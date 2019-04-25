@@ -26,6 +26,7 @@ OPENAPI_META = """
         - name: Profile
         - name: Tests
         - name: Submissions
+        - name: Service
     servers:
         - url: /
     components:
