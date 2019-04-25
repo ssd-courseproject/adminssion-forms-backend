@@ -232,9 +232,10 @@ class RequestLog(db.Model):
     id = Column(BigInteger, primary_key=True)
     user_id = Column(BigInteger)
     role = Column(BigInteger)
+    method = Column(Text)
     path = Column(Text)
     data = Column(Text)
-    date = Column(Date, default=datetime.utcnow)
+    date = Column(DateTime, default=datetime.utcnow)
 
 
 class ORM:
@@ -469,9 +470,9 @@ class ORM:
             print(f'Couldn\'t add question: {excpt}')
         return None
 
-    def add_log(self, user_id, role, path, data):
+    def add_log(self, user_id, role, method, path, data):
         try:
-            model = RequestLog(user_id=user_id, role=role, path=path, data=data)
+            model = RequestLog(user_id=user_id, role=role, method=method, path=path, data=data)
             self.session.add(model)
             self.session.commit()
             return model.id
