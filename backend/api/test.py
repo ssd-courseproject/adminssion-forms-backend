@@ -4,7 +4,7 @@ from flask_restful import Resource
 from marshmallow import fields
 from webargs.flaskparser import use_kwargs, use_args
 
-from backend.core import enums
+from backend.core.enums import UsersRole
 from backend.core.decorators import candidate_role_required
 from backend.core.models import Users
 from backend.core.schema import TestsRegistrationSchema, TestsSchema, TestsSubmissionsSchema, QuestionsSchema
@@ -57,7 +57,7 @@ class TestsList(Resource):
 
         """
         user: Users = get_current_user()
-        if user.role == enums.UsersRole.MANAGER or user.role == enums.UsersRole.STAFF:
+        if user.role == UsersRole.MANAGER or user.role == UsersRole.STAFF:
             return fail_response(msg="You are not allowed to create test", code=406)
         tests = application.orm.get_tests()
         if tests is None:

@@ -5,6 +5,8 @@ from backend.core.backend_app import FormsBackend
 
 def application_extend(application: FormsBackend):
     from backend.core.models import Users
+    from backend.core.enums import UsersRole
+    from flask_jwt_extended import get_current_user
 
     @application.jwt.token_in_blacklist_loader
     def check_if_token_in_blacklist(decrypted_token):
@@ -21,6 +23,19 @@ def application_extend(application: FormsBackend):
     @application.jwt.user_loader_callback_loader
     def fetch_user(identity) -> Users:
         return application.orm.get_user_auth_by_email(identity).user
+
+    @application.app.before_request
+    def log_request():
+        from flask import request
+
+        user: Users = get_current_user()
+
+        if user.role == UsersRole.MANAGER or user.role == UsersRole.STAFF:
+            # todo
+            # collect data
+            # write data to db
+
+            pass
 
     @application.app.errorhandler(422)
     def handle_error(err):
