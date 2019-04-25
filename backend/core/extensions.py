@@ -36,11 +36,10 @@ def application_extend(application: FormsBackend):
 
         if user is not None:
             if user.role == UsersRole.MANAGER or user.role == UsersRole.STAFF:
-                # todo
-                # collect data
-                # write data to db
+                path = request.url
+                data = request.get_json()
 
-                pass
+                application.orm.add_log(user.id, user.role, path, data)
 
     @application.app.errorhandler(422)
     def handle_error(err):
