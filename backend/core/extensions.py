@@ -22,7 +22,11 @@ def application_extend(application: FormsBackend):
 
     @application.jwt.user_loader_callback_loader
     def fetch_user(identity) -> Users:
-        return application.orm.get_user_auth_by_email(identity).user
+        print(identity)
+        user_auth = application.orm.get_user_auth_by_email(identity)
+        print(user_auth)
+
+        return user_auth.user
 
     @application.app.before_request
     def log_request():
@@ -30,12 +34,13 @@ def application_extend(application: FormsBackend):
 
         user: Users = get_current_user()
 
-        if user.role == UsersRole.MANAGER or user.role == UsersRole.STAFF:
-            # todo
-            # collect data
-            # write data to db
+        if user is not None:
+            if user.role == UsersRole.MANAGER or user.role == UsersRole.STAFF:
+                # todo
+                # collect data
+                # write data to db
 
-            pass
+                pass
 
     @application.app.errorhandler(422)
     def handle_error(err):

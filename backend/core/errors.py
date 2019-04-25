@@ -4,7 +4,7 @@ error_descriptions = {
         'status': 401,
     },
     'InsufficientRights': {
-        'message': ["You have insufficient rights fot this action"],
+        'message': ["You have insufficient rights for this action."],
         'status': 403
     },
     'MethodNotAllowed': {
@@ -26,6 +26,10 @@ error_descriptions = {
     'WrongTokenError': {
         'message': ["Provided wrong type of token."],
         'status': 450,
+    },
+    'WrongApplicationCode': {
+        'message': ["Wrong configuration of endpoint. Check logs for more information."],
+        'status': 520
     }
 }
 
@@ -35,4 +39,8 @@ class InsufficientRights(Exception):
 
 
 class UserDoesNotExist(Exception):
+    pass
+
+
+class WrongApplicationCode(Exception):
     pass

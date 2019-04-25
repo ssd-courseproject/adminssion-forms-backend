@@ -5,8 +5,7 @@ from passlib.hash import argon2
 from validate_email import validate_email
 from webargs.flaskparser import use_args
 
-from backend.core.decorators import user_some_role_required
-from backend.core.enums import UsersRole
+from backend.core.decorators import university_staff_only
 from backend.core.models import Users
 from backend.core.schema import RegistrationSchema, UsersSchema, CandidatesDocumentsSchema, CandidatesInfoSchema, \
     CandidatesStatusSchema
@@ -68,7 +67,8 @@ class UserRegistration(Resource):
 
 
 class UserProfile(Resource):
-    @user_some_role_required([UsersRole.MANAGER, UsersRole.STAFF])
+    @jwt_required
+    @university_staff_only
     def get(self, u_id):
         """
         ---
@@ -136,10 +136,13 @@ class ProfileRetreiver(object):
         profile.update({'document': docs_schema.dump(documents).data})
         profile.update({'status': info_schema.dump(status).data})
         profile.update({'info': status_schema.dump(info).data})
+
         return jsonify(profile)
 
 
 class UsersList(Resource):
+    @jwt_required
+    @university_staff_only
     def get(self, page=1):
         """
         ---
